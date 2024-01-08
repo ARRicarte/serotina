@@ -12,7 +12,7 @@ import cPickle as pickle
 import gzip
 from util import crossmatch, findFirstDuplicate2, findFirstDuplicate2_2d, findDuplicates, primariesAndSecondaries, openTreeFile
 import accretion_recipes as acc
-import black_hole_binaries as bhb
+import black_hole_mergers as bhb
 import time as tim
 import config
 
@@ -339,9 +339,10 @@ class SAM(object):
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
-			#NOTE:  this is not yet vectorized.  This sucks.
-			mergerKicks = np.array([bhb.calcRemnantKick(self.m_bh[primaries[i]], self.m_bh[secondaries[i]], self.spin_bh[primaries[i]], self.spin_bh[secondaries[i]], \
-			theta1=theta1[i], theta2=theta2[i], phi1=phi1[i], phi2=phi2[i]) for i in range(npts)])
+			mergerKicks = bhb.calcRemnantKick(self.m_bh[primaries], self.m_bh[secondaries], self.spin_bh[primaries], self.spin_bh[secondaries], theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2)
+			
+			#mergerKicks = np.array([bhb.calcRemnantKick(self.m_bh[primaries[i]], self.m_bh[secondaries[i]], self.spin_bh[primaries[i]], self.spin_bh[secondaries[i]], \
+			#theta1=theta1[i], theta2=theta2[i], phi1=phi1[i], phi2=phi2[i]) for i in range(npts)])
 
 			#Compare kick velocity to Choksi formula
 			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], sf.t2z(times)))
