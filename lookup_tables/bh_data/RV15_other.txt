@@ -1,0 +1,140 @@
+Title: Relations Between Central Black Hole Mass and Total 
+       Galaxy Stellar Mass in the Local Universe 
+Authors: Reines A.E., Volonteri M. 
+Table: Additional Objects
+================================================================================
+Byte-by-byte Description of file: apj519595t3_mrt.txt
+--------------------------------------------------------------------------------
+   Bytes Format Units       Label   Explanations
+--------------------------------------------------------------------------------
+       1 A1     ---         Type    Galaxy type (1)
+   3- 16 A14    ---         Name    Object name (2)
+      18 A1     ---       f_Name    Flag on Name (3)
+  20- 24 F5.2   [solMass]   logM*   Log total stellar mass (4)
+  26- 30 F5.2   [solMass]   logMBH  Log black hole mass (5)
+  33- 36 F4.2   [solMass] e_logMBH  Error in logMBH
+--------------------------------------------------------------------------------
+Note (1): 
+    1 = Dwarf Galaxies with Broad-line AGN;
+    2 = Reverberation-Mapped AGN;
+    3 = Galaxies with Dynamical BH Masses.
+Note (2): Dwarf galaxies with the designation RGG are from 
+          Reines et al. (2013) [2013ApJ...775..116R].
+Note (3): 
+     a = BH mass from Baldassare et al. (2015) [2015ApJ...809L..14B]. 
+     b = BH mass from Thornton et al. (2008) [2008ApJ...686..892T].
+Note (4): Uncertainties are ~0.3 dex. The AGN contribution has been removed 
+          for the dwarf galaxies and reverberation-mapped AGN. All stellar 
+          masses are estimated using color-dependent mass-to-light ratios 
+          from Zibetti et al. (2009) [2009MNRAS.400.1181Z].
+Note (5): BH masses for the reverberation-mapped AGN are taken from the AGN 
+          Black Hole Mass Database (Bentz & Katz 2015) [2015PASP..127...67B]. 
+          Dynamical BH masses are taken from Kormendy & Ho (2013)
+          [2013ARA&A..51..511K].
+--------------------------------------------------------------------------------
+1 RGG1              9.30  5.44  0.50
+1 RGG9              9.24  5.00  0.50
+1 RGG11             9.30  5.29  0.50
+1 RGG20             9.29  6.10  0.50
+1 RGG21             9.45  5.80  0.50
+1 RGG32             8.90  5.28  0.50
+1 RGG48             8.96  5.18  0.50
+1 RGG118         a  9.43  4.70  0.50
+1 RGG119            9.12  5.42  0.50
+1 RGG123            9.36  5.79  0.50
+1 RGG127            9.36  5.21  0.50
+1 Pox52          b  8.63  5.48  0.50
+2 Mrk590           11.38  7.57  0.07
+2 Mrk79            10.41  7.61  0.12
+2 Mrk110           10.14  7.29  0.10
+2 NGC3227          10.36  6.77  0.10
+2 SBS1116+583A     10.00  6.56  0.08
+2 Arp151            9.90  6.67  0.05
+2 Mrk1310           9.62  6.21  0.08
+2 NGC4051          10.16  6.13  0.14
+2 Mrk202            9.92  6.13  0.17
+2 NGC4253          10.34  6.82  0.05
+2 NGC4395           8.90  5.45  0.14
+2 NGC5273          10.25  6.66  0.16
+2 NGC5548          10.79  7.72  0.02
+2 Mrk817            9.87  7.59  0.07
+2 Mrk290            9.52  7.28  0.06
+3 M32               8.77  6.39  0.18
+3 NGC1316          11.48  8.23  0.07
+3 NGC1332          10.92  9.17  0.06
+3 NGC1374          10.33  8.77  0.04
+3 NGC1399          11.17  8.94  0.33
+3 NGC1407          11.43  9.67  0.05
+3 NGC1550          11.02  9.59  0.07
+3 NGC2960          10.72  7.03  0.02
+3 NGC3091          11.29  9.57  0.04
+3 NGC3377          10.14  8.25  0.23
+3 NGC3379          10.59  8.62  0.11
+3 NGC3607          10.93  8.14  0.15
+3 NGC3608          10.69  8.67  0.09
+3 NGC3842          11.44  9.96  0.12
+3 NGC4261          11.33  8.72  0.09
+3 NGC4291          10.52  8.99  0.14
+3 NGC4374          11.29  8.97  0.04
+3 NGC4459          10.56  7.84  0.08
+3 NGC4472          11.51  9.40  0.06
+3 NGC4473          10.55  7.95  0.22
+3 M87              11.38  9.79  0.03
+3 NGC4486A          9.71  7.16  0.16
+3 NGC4486B          9.37  8.78  0.18
+3 NGC4649          11.30  9.67  0.10
+3 NGC4697          10.63  8.31  0.11
+3 NGC4751          10.85  9.39  0.04
+3 NGC4889          11.81 10.32  0.33
+3 NGC5077          10.99  8.93  0.23
+3 NGC5128          10.73  7.76  0.08
+3 NGC5328          11.35  9.68  0.13
+3 NGC5516          11.29  9.57  0.07
+3 NGC5576          10.64  8.44  0.12
+3 NGC5845          10.27  8.69  0.14
+3 NGC6086          11.37  9.57  0.17
+3 NGC6251          11.55  8.79  0.14
+3 NGC6861          10.91  9.32  0.08
+3 NGC7052          11.23  8.60  0.24
+3 NGC7619          11.34  9.36  0.12
+3 NGC7768          11.40  9.13  0.15
+3 IC1459           11.28  9.39  0.06
+3 A1836            11.54  9.57  0.05
+3 A3565            11.45  9.11  0.07
+3 M31              10.51  8.16  0.19
+3 M81              10.56  7.81  0.13
+3 NGC524           11.00  8.94  0.04
+3 NGC821           10.66  8.22  0.19
+3 NGC1023          10.63  7.62  0.04
+3 NGC1194          10.62  7.85  0.02
+3 NGC1277          10.95 10.23  0.08
+3 NGC2549          10.01  7.16  0.20
+3 NGC3115          10.64  8.95  0.08
+3 NGC3245          10.50  8.38  0.09
+3 NGC3585          10.96  8.52  0.13
+3 NGC3998          10.41  8.93  0.03
+3 NGC4026          10.22  8.26  0.11
+3 NGC4258          10.27  7.58  0.00
+3 NGC4342          10.15  8.66  0.20
+3 NGC4526          10.89  8.65  0.12
+3 NGC4564          10.23  7.94  0.12
+3 NGC4594          11.18  8.82  0.03
+3 NGC4596          10.48  7.88  0.20
+3 NGC7457           9.86  6.95  0.26
+3 Circinus          9.56  6.06  0.08
+3 NGC1068          10.86  6.92  0.02
+3 NGC1300          10.35  7.88  0.31
+3 NGC2273          10.47  6.94  0.02
+3 NGC2748          10.02  7.65  0.18
+3 NGC2787           9.90  7.61  0.05
+3 NGC3227          10.58  7.32  0.19
+3 NGC3368          10.52  6.88  0.09
+3 NGC3384          10.46  7.03  0.20
+3 NGC3393          10.67  7.20  0.27
+3 NGC3489          10.21  6.77  0.06
+3 NGC4388          10.01  6.86  0.01
+3 NGC4736          10.16  6.83  0.10
+3 NGC4826          10.48  6.19  0.11
+3 NGC4945          10.70  6.13  0.19
+3 NGC7582          10.58  7.74  0.09
+3 UGC3789          10.56  6.98  0.07

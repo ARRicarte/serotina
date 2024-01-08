@@ -1,0 +1,6 @@
+#These are the colored points from Baldassare et al., (2016) figure 8, except for M32.
+#Name, Mass [M_\odot], Mass error low, Mass error high, sigma [km/s], sigma error low, sigma error high
+RGG 118, 5e4, 2.3e4, 1.2e4, 27, 10, 12 #Baldassare et al., (2015)
+RGG 119, 2.9e5, 1.8e5, 4.9e5, 28, 6, 6 #Baldassare et al., (2016)
+NGC 4395, 4e5, 3e5, 8e5, 30, 5, 5 #Den Brok et al., (2015)
+Pox 52, 1.6e5, 1.1e5, 3.2e5, 37, 4, 4  #Barth et al., (2004)
