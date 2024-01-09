@@ -14,7 +14,7 @@ Time and redshift conversions.
 """
 
 with open(currentPath + "../lookup_tables/tofz.pkl", 'rb') as myfile:
-        data = pickle.load(myfile)
+	data = pickle.load(myfile)
 tarray = data['tarray']
 zarray = data['zarray']
 
@@ -48,18 +48,18 @@ def E(z):
 	return np.sqrt(cosmology.Omega_m * (1.0+z)**3 + cosmology.Omega_l)
 
 def z2t(z):
-        """
-        Compute time as a function of redshift.  Results have been tabulated for the Planck2015 cosmology.
+	"""
+	Compute time as a function of redshift.  Results have been tabulated for the Planck2015 cosmology.
 
-        Returns time in Gyr.
-        """
-        return z2t_interp(z)/1e9
+	Returns time in Gyr.
+	"""
+	return z2t_interp(z)/1e9
 
 def t2z(t):
-        """
-        Compute redshift as a function of time.
-        """
-        return t2z_interp(t)
+	"""
+	Compute redshift as a function of time.
+	"""
+	return t2z_interp(t)
 
 def computeH(z):
 	"""
@@ -71,16 +71,16 @@ def computeH(z):
 	return cosmology.H_0 * (cosmology.Omega_m * (1.0 + z)**3 + cosmology.Omega_l)**0.5
 
 def computeLuminosityDistance_slow(z):
-        """
-        Compute the luminosity distance to some redshift by actually evaluating the integral. 
+	"""
+	Compute the luminosity distance to some redshift by numerically evaluating the integral.   You probably don't want this.
 
 	So as not to waste time, this only works for flat universes.
 
-        Output in Mpc.
-        """
-        d_H = constants.c * cosmology.t_H * constants.yr
-        d_c = d_H * quad(lambda zprime: (cosmology.Omega_m*(1+zprime)**3 + cosmology.Omega_l)**-0.5, 0, z)[0]
-        return d_c * (1 + z) / (1e6 * constants.pc)
+	Output in Mpc.
+	"""
+	d_H = constants.c * cosmology.t_H * constants.yr
+	d_c = d_H * quad(lambda zprime: (cosmology.Omega_m*(1+zprime)**3 + cosmology.Omega_l)**-0.5, 0, z)[0]
+	return d_c * (1 + z) / (1e6 * constants.pc)
 
 def computedVdz(z):
 	"""

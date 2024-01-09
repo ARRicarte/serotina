@@ -341,9 +341,6 @@ class SAM(object):
 		if self.mergerKicks:
 			mergerKicks = bhb.calcRemnantKick(self.m_bh[primaries], self.m_bh[secondaries], self.spin_bh[primaries], self.spin_bh[secondaries], theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2)
 			
-			#mergerKicks = np.array([bhb.calcRemnantKick(self.m_bh[primaries[i]], self.m_bh[secondaries[i]], self.spin_bh[primaries[i]], self.spin_bh[secondaries[i]], \
-			#theta1=theta1[i], theta2=theta2[i], phi1=phi1[i], phi2=phi2[i]) for i in range(npts)])
-
 			#Compare kick velocity to Choksi formula
 			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], sf.t2z(times)))
 		else:
@@ -1036,6 +1033,8 @@ class SAM(object):
 			#Check for new black hole seeds
 			if (self.uniqueRedshift[self.step] > self.minimumSeedingRedshift) & (self.uniqueRedshift[self.step] <= self.maximumSeedingRedshift):
 				self.seed(isRelevant & ~self.metalPolluted)
+
+			#NOTE:  This is a place to make new accretion recipes! It may be as simple as just making a new bound method if you don't need extra infrastructure.
 
 			#Determine the accretion recipe we're currently using.
 			#TODO:  Make this cleaner
