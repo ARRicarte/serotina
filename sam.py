@@ -39,7 +39,7 @@ class SAM(object):
 		self.parent = mergerTreeTable[:,2].astype(int) - 1
 		self.progenitor = mergerTreeTable[:,3].astype(int) - 1
 		self.nchild = mergerTreeTable[:,4].astype(int)
-		#self.m_smooth = mergerTreeTable[:,5]
+		#self.m_smooth = mergerTreeTable[:,5]  #This is in the file, but it's not needed.
 		self.n_node = mergerTreeTable.shape[0]
 		self.nodeProperties = ['m_halo', 'redshift', 'parent', 'progenitor', 'nchild', 'time']
 
@@ -526,7 +526,12 @@ class SAM(object):
 		"""
 
 		#Determine which black holes are accreting
-		accreting = (self.mode[bhs] == 'quasar') | np.full(len(bhs), self.constant_f_min>0, dtype=bool) | np.full(len(bhs), self.constant_f_min is None, dtype=bool)
+		if self.constant_f_min is None:
+			accreting = np.ones_like(self.mode[bhs], dtype=bool)
+		elif self.constant_f_min > 0:
+			accreting = np.ones_like(self.mode[bhs], dtype=bool)
+		else:
+			accreting = self.mode[bhs] == 'quasar'
 		accretors = bhs[accreting]
 		nonAccretors = bhs[~accreting]
 		redshifts = sf.t2z(times)
