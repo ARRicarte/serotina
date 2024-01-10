@@ -11,12 +11,12 @@ from ..helpers import sam_functions as sf
 from ..cosmology import cosmology_functions as cf
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import cPickle as pickle
+import pickle
 import os
 import gzip
 from scipy.interpolate import interp1d
 from scipy.integrate import quad
-import interpolateSignalToNoise as isn
+from . import interpolateSignalToNoise as isn
 from scipy.optimize import curve_fit
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
@@ -55,7 +55,7 @@ class GravitationalWaveEventCalculator(object):
 			file = ensemble_files[f_index]
 			hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
 
-			with gzip.open(ensemble_folder+'/'+file, 'r') as myfile:
+			with gzip.open(ensemble_folder+'/'+file, 'rb') as myfile:
 				megaDict = pickle.load(myfile)
 
 			bh_mergers = megaDict['bh_mergers']
@@ -96,7 +96,7 @@ class GravitationalWaveEventCalculator(object):
 		M1, M2, and z, then just interpolate.
 		"""
 
-		print "Evaluating signal to noise.  Get comfortable, because this involves the computation of {0} integrals.".format(len(self.masses))
+		print("Evaluating signal to noise.  Get comfortable, because this involves the computation of {0} integrals.".format(len(self.masses)))
 
 		#If you haven't done it already, open the sensitivity curve data and define an interpolation function.
 		if self.sensitivityCurve is None:
@@ -135,8 +135,8 @@ class GravitationalWaveEventCalculator(object):
 			self.signalToNoiseArray[event] = strains[event] * (1.0 + self.redshifts[event])**(-1.0/6.0) * \
 			np.sqrt(quad(self._signalToNoiseIntegrand, \
 			np.maximum(np.log(f_break[event]),np.log(f_initial[event])), np.log(np.minimum(f_ISCO[event], self.sensitivityCurve[-1,0])), epsrel=0.01)[0])
-			print "#{0}:  M_1 = {1:2.2e} solar masses, q = {2:2.2f}, z = {3:2.1f}, S/N = {4:3.3f}".format(event, \
-				self.masses[event], self.massRatios[event], self.redshifts[event], self.signalToNoiseArray[event])
+			print("#{0}:  M_1 = {1:2.2e} solar masses, q = {2:2.2f}, z = {3:2.1f}, S/N = {4:3.3f}".format(event, \
+				self.masses[event], self.massRatios[event], self.redshifts[event], self.signalToNoiseArray[event]))
 
 		observingSuccesses = self.signalToNoiseArray > sigmaThreshold
 		self.observability = observingSuccesses.astype(float)
@@ -183,7 +183,7 @@ class GravitationalWaveEventCalculator(object):
 
 		bootstraps = np.zeros(n_bootstrap)
 		for boot in range(n_bootstrap):
-                        randomFileNumbers = np.random.randint(0, self.n_sample, self.n_sample)
+			randomFileNumbers = np.random.randint(0, self.n_sample, self.n_sample)
 			bootstraps[boot] = np.sum(valueOfRealization[randomFileNumbers])
 
 		output = np.percentile(bootstraps, percentiles)
@@ -249,9 +249,9 @@ def plotEventRateByRedshift(gw_packs, colors, labels, figsize=(4,4), yearsOfObse
 
 	ax.plot(xlim, [1,1], ls='--', lw=1, color='k', zorder=0)
 	ax.legend(frameon=False, loc='upper right')
-        ax.set_xlim(xlim)
+	ax.set_xlim(xlim)
 	ax.set_ylim(ylim)
-        ax.set_xlabel("$z$", fontsize=14)
+	ax.set_xlabel("$z$", fontsize=14)
 	ax.set_ylabel(ylabel, fontsize=13)
 	ax.set_yscale(yscale)
 
@@ -262,7 +262,7 @@ def plotEventRateByRedshift(gw_packs, colors, labels, figsize=(4,4), yearsOfObse
 		fig.savefig(output)
 
 def plotEventRateByMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObservation=None, yscale='log', xlim=(1e2,1e10), \
-        ylim=(1e-3,1e2), output=None, mode='fill'):
+	ylim=(1e-3,1e2), output=None, mode='fill'):
 
 	fig, ax = plt.subplots(figsize=figsize)
 
@@ -309,14 +309,14 @@ def plotEventRateByMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObservat
 		fig.savefig(output)
 
 def plotEventRateByHostMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObservation=None, yscale='log', xlim=(10**10.6,1e15), \
-        ylim=(1e-3,1e2), output=None, modelNorm=None):
+	ylim=(1e-3,1e2), output=None, modelNorm=None):
 
-        fig, ax = plt.subplots(figsize=figsize)
+	fig, ax = plt.subplots(figsize=figsize)
 
-        for e_index in range(len(gw_packs)):
-                mList, histoList = gw_packs[e_index]
-                if yearsOfObservation is not None:
-                        histoList = histoList * yearsOfObservation
+	for e_index in range(len(gw_packs)):
+		mList, histoList = gw_packs[e_index]
+		if yearsOfObservation is not None:
+			histoList = histoList * yearsOfObservation
 		ax.errorbar(mList, np.mean(histoList, axis=1), yerr=np.diff(histoList, axis=1)/2, \
 		color=colors[e_index], alpha=0.7, label=labels[e_index])
 		if modelNorm is not None:
@@ -325,21 +325,21 @@ def plotEventRateByHostMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObse
 				simpleModel *= yearsOfObservation
 			ax.plot(mList, simpleModel, color=colors[e_index], lw=2)
 
-        ax.legend(frameon=False, loc='upper right')
-        ax.set_xlim(xlim)
-        ax.set_xscale('log')
-        ax.set_ylim(ylim)
-        ax.set_xlabel(r"$M_h(z=0) \ [M_\odot]$", fontsize=13)
-        if yearsOfObservation is None:
-                ax.set_ylabel("Events At Host Halo Mass Per Year", fontsize=13)
-        else:
-                ax.set_ylabel("Events After {0} Years".format(yearsOfObservation), fontsize=13)
-        ax.set_yscale(yscale)
-        fig.tight_layout()
-        if output is None:
-                fig.show()
-        else:
-                fig.savefig(output)
+	ax.legend(frameon=False, loc='upper right')
+	ax.set_xlim(xlim)
+	ax.set_xscale('log')
+	ax.set_ylim(ylim)
+	ax.set_xlabel(r"$M_h(z=0) \ [M_\odot]$", fontsize=13)
+	if yearsOfObservation is None:
+		ax.set_ylabel("Events At Host Halo Mass Per Year", fontsize=13)
+	else:
+		ax.set_ylabel("Events After {0} Years".format(yearsOfObservation), fontsize=13)
+	ax.set_yscale(yscale)
+	fig.tight_layout()
+	if output is None:
+		fig.show()
+	else:
+		fig.savefig(output)
 
 def computeTotalEvents(gw_packs_m, yearsOfObservation=4):
 
@@ -347,8 +347,8 @@ def computeTotalEvents(gw_packs_m, yearsOfObservation=4):
 	errors = np.array([0.5*np.squeeze(np.diff(gw_packs_m[i][1], axis=1)) for i in range(len(gw_packs_m))])
 	propagatedErrors = np.sqrt(np.sum(errors**2, axis=1))
 
-	print "Total Numbers:", averages
-	print "Statistical Uncertainty:", propagatedErrors
+	print("Total Numbers:", averages)
+	print("Statistical Uncertainty:", propagatedErrors)
 
 def fitModel(eventsByHostMass, fitRange=(1e11,1e13)):
 	mList, histoList = eventsByHostMass

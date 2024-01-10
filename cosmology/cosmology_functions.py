@@ -1,6 +1,6 @@
 import numpy as np
-import cosmology
-import cPickle as pickle
+from ..cosmology import cosmology
+import pickle
 from scipy.interpolate import interp1d
 from scipy.integrate import quad
 from ..constants import constants
@@ -14,7 +14,7 @@ Time and redshift conversions.
 """
 
 with open(currentPath + "../lookup_tables/tofz.pkl", 'rb') as myfile:
-	data = pickle.load(myfile)
+	data = pickle.load(myfile, encoding='latin1')
 tarray = data['tarray']
 zarray = data['zarray']
 
@@ -26,7 +26,7 @@ Tabulated luminosity distances
 """
 
 with open(currentPath + "../lookup_tables/luminosityDistances.pkl", 'rb') as myfile:
-	data = pickle.load(myfile)
+	data = pickle.load(myfile, encoding='latin1')
 z_ld = data['redshifts']
 ld = data['luminosityDistances']
 

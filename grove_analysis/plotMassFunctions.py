@@ -4,11 +4,10 @@ ARR: 04.19.17
 Based on calcMassFunctions, just taking one aspect and allowing multiple ensembles as argument.
 """
 
-from __future__ import division
 import numpy as np
 import os
 import gzip
-import cPickle as pickle
+import pickle
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -35,7 +34,7 @@ def calcMassFunctions(ensemble, redshiftSlices=[0.6, 1.0, 2.0, 3.0, 4.0, 5.0], \
 
 	samplingFactor = float(n_mass) / (logRange[1] - logRange[0])
 	ensemble_files = [file for file in os.listdir(ensemble) if file[-5:]=='.pklz']
-	print "Reading from {0}".format(ensemble)
+	print("Reading from {0}".format(ensemble))
 	
 	for f_index in range(len(ensemble_files)):
 		file = ensemble_files[f_index]
@@ -46,7 +45,7 @@ def calcMassFunctions(ensemble, redshiftSlices=[0.6, 1.0, 2.0, 3.0, 4.0, 5.0], \
 		weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 
 		#Unpack data
-		with gzip.open(ensemble+'/'+file, 'r') as myfile:
+		with gzip.open(ensemble+'/'+file, 'rb') as myfile:
 			megaDict = pickle.load(myfile)
 		uniqueRedshifts = np.unique(megaDict['redshift'])
 
@@ -54,7 +53,7 @@ def calcMassFunctions(ensemble, redshiftSlices=[0.6, 1.0, 2.0, 3.0, 4.0, 5.0], \
 		for z_index in range(len(redshiftSlices)):
 			closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 			if np.abs(closestRedshift - redshiftSlices[z_index]) > 0.1:
-				print "Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift)
+				print("Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift))
 
 			redshiftMask = (megaDict['redshift'] == closestRedshift)
 			eddRatios = megaDict['L_bol'] / sf.eddingtonLum(megaDict['m_bh'])
@@ -77,17 +76,17 @@ def calcMassFunctions(ensemble, redshiftSlices=[0.6, 1.0, 2.0, 3.0, 4.0, 5.0], \
 
 	#Compute the mass function from this 2D histogram
 	for z_index in range(len(redshiftSlices)):
-		print "z = {0}:".format(redshiftSlices[z_index])
+		print("z = {0}:".format(redshiftSlices[z_index]))
 		closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 
 		#Collect the pieces for bootstrapping
-		print "   Creating bootstrap pieces."
+		print("   Creating bootstrap pieces.")
 		for treeIndex in range(n_sample):
 			massFunctionPieces[:,z_index,treeIndex] = np.histogram(np.log10(bh_masses[z_index][bh_fileIndices[z_index]==treeIndex+1]), bins=logBHMassBins, \
 			weights=bh_weights[z_index][bh_fileIndices[z_index]==treeIndex+1]/np.diff(logBHMassBins)[0])[0]
 
 		#Bootstrapping!
-		print "   Computing mass function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap)
+		print("   Computing mass function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap))
 		for boot in range(n_bootstrap):
 			randomFileNumbers = np.random.randint(0, n_sample, n_sample)
 			massFunctions[:,z_index,boot] = np.sum(massFunctionPieces[:,z_index,randomFileNumbers], axis=1)
@@ -112,22 +111,22 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[0.6,
 	#Reshaping because subplots is dumb
 	axarr = np.atleast_2d(axarr)
 	if figShape[0] == 1:
-                axarr = axarr.reshape(1, len(axarr))
-        elif figShape[1] == 1:
-                axarr = axarr.reshape(len(axarr), 1)
+		axarr = axarr.reshape(1, len(axarr))
+	elif figShape[1] == 1:
+		axarr = axarr.reshape(len(axarr), 1)
 
 	#Merloni & Heinz data
 	mh_redshifts = np.array([0.6, 1.0, 2.0, 3.0, 4.0, 5.0])
 	mh_path = currentPath + '../lookup_tables/bh_data/Merloni_Heinz_2008/area_data/'
 
 	if includeQuasars:
-		with open(currentPath + "../lookup_tables/bh_data/Kelly_Shen_2013/KellyShen2013.pkl", 'r') as myfile:
-			quasarObservations = pickle.load(myfile)
+		with open(currentPath + "../lookup_tables/bh_data/Kelly_Shen_2013/KellyShen2013.pkl", 'rb') as myfile:
+			quasarObservations = pickle.load(myfile, encoding='latin1')
 			z_ks13 = quasarObservations['redshifts']
 
 	if showCompleteness:
-		with open(completenessFile, 'r') as myfile:
-			completenessTable = pickle.load(myfile)
+		with open(completenessFile, 'rb') as myfile:
+			completenessTable = pickle.load(myfile, encoding='latin1')
 
 	for e_index in range(len(massFuncts)):
 		logBHMassBins, massFunctionRange = massFuncts[e_index]
@@ -240,7 +239,7 @@ def computeTreeLimits(ensemble, redshiftSlices, alphaBeta=(8.32,5.35), biggestFi
 	samplingFactor = float(n_mass) / (logRange[1] - logRange[0])
 
 	#Unpack data
-	with gzip.open(ensemble+'/'+biggestFile, 'r') as myfile:
+	with gzip.open(ensemble+'/'+biggestFile, 'rb') as myfile:
 		megaDict = pickle.load(myfile)
 	uniqueRedshifts = np.unique(megaDict['redshift'])
 	hostHaloMass = 10**float(biggestFile.split('_')[-1].split('m')[1].split('n')[0])
@@ -248,7 +247,7 @@ def computeTreeLimits(ensemble, redshiftSlices, alphaBeta=(8.32,5.35), biggestFi
 	limits = []
 
 	for z_index in range(len(redshiftSlices)):
-                closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
+		closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 
 		redshiftMask = megaDict['redshift'] == closestRedshift
 		biggestHaloAtRedshift = np.max(megaDict['m_halo'][redshiftMask])
@@ -267,7 +266,7 @@ def computeMassDensity(massFuncts, redshiftSlices=[0], z=0, numberOfDexToConvolv
 		convolutionFactor = np.exp(0.5 * (numberOfDexToConvolve * np.log(10))**2)
 		n_function = interp1d(logBHMassBins, np.average(massFunctionRange[:,0,:], axis=1) * cosmology.h**3 * convolutionFactor)
 		integral = quad(lambda logm: 10**logm*n_function(logm), logBHMassBins[0], logBHMassBins[-1])
-		print "The log of the local mass density is {0:3.2f} solar masses per cubic Mpc.".format(np.log10(integral[0]))
+		print("The log of the local mass density is {0:3.2f} solar masses per cubic Mpc.".format(np.log10(integral[0])))
 		densities.append(np.log10(integral[0]))
 	return densities
 

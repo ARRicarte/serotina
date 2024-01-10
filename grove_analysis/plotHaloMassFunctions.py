@@ -4,11 +4,10 @@ ARR: 05.17.17
 Based on calcMassFunctions, just taking one aspect and allowing multiple ensembles as argument.
 """
 
-from __future__ import division
 import numpy as np
 import os
 import gzip
-import cPickle as pickle
+import pickle
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -33,11 +32,11 @@ def calcHaloMassFunctions(ensemble, redshiftSlices=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0
 
 	samplingFactor = float(n_mass) / (logRange[1] - logRange[0])
 	ensemble_files = [file for file in os.listdir(ensemble) if file[-5:]=='.pklz']
-	print "Reading from {0}".format(ensemble)
+	print("Reading from {0}".format(ensemble))
 	
 	for f_index in range(len(ensemble_files)):
 		file = ensemble_files[f_index]
-		print file
+		print(file)
 		hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
 		nHalos = int(file.split('_')[-1].split('n')[1].split('.')[0])
 	
@@ -49,7 +48,7 @@ def calcHaloMassFunctions(ensemble, redshiftSlices=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0
 		for z_index in range(len(redshiftSlices)):
 			closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 			if np.abs(closestRedshift - redshiftSlices[z_index]) > 0.1:
-				print "Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift)
+				print("Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift))
 
 			#Weight by z=0 abundance
 			weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
@@ -66,17 +65,17 @@ def calcHaloMassFunctions(ensemble, redshiftSlices=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0
 
 	#Compute the mass function from this 2D histogram
 	for z_index in range(len(redshiftSlices)):
-		print "z = {0}:".format(redshiftSlices[z_index])
+		print("z = {0}:".format(redshiftSlices[z_index]))
 		closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 
 		#Collect the pieces for bootstrapping
-		print "   Creating bootstrap pieces."
+		print("   Creating bootstrap pieces.")
 		for treeIndex in range(n_sample):
 			massFunctionPieces[:,z_index,treeIndex] = np.histogram(np.log10(halo_masses[z_index][halo_fileIndices[z_index]==treeIndex+1]), bins=logMassBins, \
 			weights=halo_weights[z_index][halo_fileIndices[z_index]==treeIndex+1]/np.diff(logMassBins)[0])[0]
 
 		#Bootstrapping!
-		print "   Computing mass function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap)
+		print("   Computing mass function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap))
 		for boot in range(n_bootstrap):
 			randomFileNumbers = np.random.randint(0, n_sample, n_sample)
 			massFunctions[:,z_index,boot] = np.sum(massFunctionPieces[:,z_index,randomFileNumbers], axis=1)
@@ -99,9 +98,9 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[1.0,
 
 	#Reshaping because subplots is dumb
 	if figShape[0] == 1:
-                axarr = axarr.reshape(1, len(axarr))
-        elif figShape[1] == 1:
-                axarr = axarr.reshape(len(axarr), 1)
+		axarr = axarr.reshape(1, len(axarr))
+	elif figShape[1] == 1:
+		axarr = axarr.reshape(len(axarr), 1)
 
 	for e_index in range(len(massFuncts)):
 		logMassBins, massFunctionRange = massFuncts[e_index]
@@ -183,15 +182,15 @@ def haloToBlackHoleMassFunctions(haloMassFuncts, redshiftSlices=[3.0], alphaBeta
 	holeMasses = 10**(alphaBeta[0] + alphaBeta[1] * np.log10(sigmas/200.0))
 	
 	#This section is dedicated to estimating a derivative
-        logMh = np.log10(centralHaloMasses)
-        logsigma = np.log10(sigmas)
-        dlogsigma_dlogMh = np.zeros((len(redshiftSlices), len(centralHaloMasses)))
-        dlogsigma_dlogMh[:,1:-1] = (logsigma[:,2:] - logsigma[:,:-2]) / (logMh[2:] - logMh[:-2])
-        dlogsigma_dlogMh[:,0] = (logsigma[:,1] - logsigma[:,0]) / (logMh[1] - logMh[0])
-        dlogsigma_dlogMh[:,-1] = (logsigma[:,-1] - logsigma[:,-2]) / (logMh[-1] - logMh[-2])
+	logMh = np.log10(centralHaloMasses)
+	logsigma = np.log10(sigmas)
+	dlogsigma_dlogMh = np.zeros((len(redshiftSlices), len(centralHaloMasses)))
+	dlogsigma_dlogMh[:,1:-1] = (logsigma[:,2:] - logsigma[:,:-2]) / (logMh[2:] - logMh[:-2])
+	dlogsigma_dlogMh[:,0] = (logsigma[:,1] - logsigma[:,0]) / (logMh[1] - logMh[0])
+	dlogsigma_dlogMh[:,-1] = (logsigma[:,-1] - logsigma[:,-2]) / (logMh[-1] - logMh[-2])
 
 	#Finally, the black hole mass function:
-        holeMassFunctions = haloMassFunctions / dlogsigma_dlogMh / alphaBeta[1]
+	holeMassFunctions = haloMassFunctions / dlogsigma_dlogMh / alphaBeta[1]
 
 	#Resample so that the black hole masses are the same across redshift and evenly sampled
 	logEvenHoleMasses = np.linspace(4, 11, 100)
@@ -212,10 +211,10 @@ def estimateBlackHoleCompleteness(blackHoleMassFuncts, redshiftSlices=[3.0], thr
 
 	#Analytic black hole mass functions
 	with open(trueFunctions, 'r') as myfile:
-                dictionary = pickle.load(myfile)
+		dictionary = pickle.load(myfile)
 
-        m_bh = dictionary['m_bh']
-        numberDensity = dictionary['numberDensity']
+	m_bh = dictionary['m_bh']
+	numberDensity = dictionary['numberDensity']
 	redshift = dictionary['redshift']
 
 	#Also resample this so that black hole masses are the same across redshift and evenly sampled
@@ -226,27 +225,27 @@ def estimateBlackHoleCompleteness(blackHoleMassFuncts, redshiftSlices=[3.0], thr
 
 	analyticMassFunction = RectBivariateSpline(redshift, logEvenHoleMasses, evenAnalyticMassFunctions)
 
-        holeLimits = np.zeros(len(redshiftSlices))
+	holeLimits = np.zeros(len(redshiftSlices))
 	dexPerBin = np.diff(np.log10(centralMasses))[0]
 	nBinsToConvolve = dexScatter / dexPerBin
 	kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
-        for z_index in range(len(redshiftSlices)):
+	for z_index in range(len(redshiftSlices)):
 		correctMassFunction = np.convolve(analyticMassFunction(redshiftSlices[z_index], np.log10(centralMasses))[0,:], kernel, mode='same')
 		inferredMassFunction = np.convolve(massFunctionRange[z_index,:], kernel, mode='same')
-                ratio = inferredMassFunction / correctMassFunction
-                badBins = ratio < threshold
-                offenders = np.where(np.diff(badBins.astype(int)) == 1)[0]
-                if len(offenders) > 0:
-                        firstOffender = offenders[0] + 1
-                        incompleteHoleMass = centralMasses[firstOffender]
-                        holeLimits[z_index] = incompleteHoleMass
+		ratio = inferredMassFunction / correctMassFunction
+		badBins = ratio < threshold
+		offenders = np.where(np.diff(badBins.astype(int)) == 1)[0]
+		if len(offenders) > 0:
+			firstOffender = offenders[0] + 1
+			incompleteHoleMass = centralMasses[firstOffender]
+			holeLimits[z_index] = incompleteHoleMass
 
-        if outfile is not None:
-                outDict = {'redshift': redshiftSlices, 'holeLimits': holeLimits}
-                with open(outfile, 'w') as myfile:
-                        pickle.dump(outDict, myfile, protocol=2)
-        else:
-                return redshiftSlices, holeLimits
+	if outfile is not None:
+		outDict = {'redshift': redshiftSlices, 'holeLimits': holeLimits}
+		with open(outfile, 'w') as myfile:
+			pickle.dump(outDict, myfile, protocol=2)
+	else:
+		return redshiftSlices, holeLimits
 
 if __name__ == '__main__':
 	ensembles = ['blq_dcbh_a8.45b5.0_haloRatios_newSeeding_superEdd_061418/']

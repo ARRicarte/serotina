@@ -71,6 +71,6 @@ def logMstar(logMhalo, z):
 
 def Mstar(Mhalo, z):
 	logeps = logEpsilon(z)
-        logM1 = logCharacteristicMass(z)
+	logM1 = logCharacteristicMass(z)
 
 	return 10**(logeps + logM1 + funct(np.log10(Mhalo) - logM1, z) - funct(0, z))

@@ -1,1 +1,1 @@
-from sam_analysis import *
+from .sam_analysis import *

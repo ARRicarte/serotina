@@ -8,7 +8,7 @@ import numpy as np
 import os
 from .. import cosmology
 from .. import constants
-import cPickle as pickle
+import pickle
 from scipy.integrate import quad
 from scipy.interpolate import interp1d, interp2d, InterpolatedUnivariateSpline, RectBivariateSpline, griddata
 from scipy.signal import fftconvolve
@@ -71,7 +71,7 @@ def M2v(masses, redshifts):
 def v2sigma_Ferrarese(v_c, gammaDelta=(0.55,0.84)):
 	"""
 	Calculate sigma from v_c, using Ferrarese 2002 by default.  This is parameterized as logv = gamma + delta*logsigma.
-        """
+	"""
 	return 10**((np.log10(v_c)-gammaDelta[0])/gammaDelta[1])
 
 def v2sigma_SIS(v_c):
@@ -84,15 +84,15 @@ def v2sigma_dpl(v_c, lowerSlope=2.210, upperSlope=0.4810, vBreak=131.5, sigmaBre
 	"""
 	Return sigma from v_c based on Larkin & McLaughlin (2016).
 	"""
-        if not hasattr(v_c, '__len__'):
-                v_c = np.array([v_c])
-        output = np.zeros(len(v_c))
-        output[v_c < vBreak] = sigmaBreak * (v_c[v_c < vBreak] / vBreak)**lowerSlope
-        output[v_c >= vBreak] = sigmaBreak * (v_c[v_c >= vBreak] / vBreak)**upperSlope
-        return output
+	if not hasattr(v_c, '__len__'):
+		v_c = np.array([v_c])
+	output = np.zeros(len(v_c))
+	output[v_c < vBreak] = sigmaBreak * (v_c[v_c < vBreak] / vBreak)**lowerSlope
+	output[v_c >= vBreak] = sigmaBreak * (v_c[v_c >= vBreak] / vBreak)**upperSlope
+	return output
 
-with open(currentPath + '../lookup_tables/Larkin_McLaughlin_2016/v2sigma.pkl', 'r') as myfile:
-	v2sigma_dict = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/Larkin_McLaughlin_2016/v2sigma.pkl', 'rb') as myfile:
+	v2sigma_dict = pickle.load(myfile, encoding='latin1')
 
 v_peak_ll16 = v2sigma_dict['V_peak']
 sigma_ll16 = v2sigma_dict['sigma']
@@ -101,8 +101,8 @@ def v2sigma(v_peak, redshiftEvolution=0.25):
 	"""
 	Now using a dictionary made of modeling from LL16!
 	"""
-        if not hasattr(v_peak, '__len__'):
-                v_peak = np.array([v_peak])
+	if not hasattr(v_peak, '__len__'):
+		v_peak = np.array([v_peak])
 
 	return np.interp(v_peak, v_peak_ll16, sigma_ll16)
 
@@ -116,8 +116,8 @@ def v2M_BH(v_c, alphaBeta=(8.22,4.58), gammaDelta=(0.55,0.84)):
 ##CORRECT SIGMA DEFINITION AS OF 06/09##
 ########################################
 
-with open(currentPath + '../lookup_tables/velocityDispersion/velocityDispersion.pkl', 'r') as myfile:
-	vd_dict = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/velocityDispersion/velocityDispersion.pkl', 'rb') as myfile:
+	vd_dict = pickle.load(myfile, encoding='latin1')
 
 velocityDispersionTable = vd_dict['sigma']
 vd_redshift = vd_dict['redshift']
@@ -133,7 +133,7 @@ Time and redshift conversions.
 """
 
 with open(currentPath + "../lookup_tables/tofz.pkl", 'rb') as myfile:
-	data = pickle.load(myfile)
+	data = pickle.load(myfile, encoding='latin1')
 tarray = data['tarray']
 zarray = data['zarray']
 
@@ -173,8 +173,8 @@ def t_dyn(redshifts):
 	Output in Gyr
 	"""
 	d = cosmology.Omega_m * (1+redshifts)**3 / (cosmology.Omega_m * (1+redshifts)**3 + \
-        cosmology.Omega_l + (1.0 - cosmology.Omega_l - cosmology.Omega_m)*(1+redshifts)**2) - 1
-        Delta_c = 18*np.pi**2 + 82*d - 39*d**2
+	cosmology.Omega_l + (1.0 - cosmology.Omega_l - cosmology.Omega_m)*(1+redshifts)**2) - 1
+	Delta_c = 18*np.pi**2 + 82*d - 39*d**2
 	outTime = 0.003276 / cosmology.h * (cosmology.Omega_m/(d+1) * Delta_c/(18*np.pi**2))**-0.5 * ((1.0+redshifts)/10)**-1.5
 	return outTime
 
@@ -219,10 +219,10 @@ def eddingtonLimit(m_bh, efficiency=0.1):
 	return 4 * np.pi * constants.G * m_bh * constants.m_p / (efficiency * constants.sigma_T * constants.c) * constants.yr
 
 def eddingtonLum(m_bh):
-        """
-        Returns the Eddington luminosity in units of solar luminosities.
-        """
-        return 4 * np.pi * constants.G * m_bh * constants.M_sun * constants.m_p * constants.c / constants.sigma_T / constants.L_sun
+	"""
+	Returns the Eddington luminosity in units of solar luminosities.
+	"""
+	return 4 * np.pi * constants.G * m_bh * constants.M_sun * constants.m_p * constants.c / constants.sigma_T / constants.L_sun
 
 class treeNavigator(object):
 
@@ -261,8 +261,8 @@ class treeNavigator(object):
 		return self.path + '/m'+mString+'_'+'n'+nString+'.bin.gz'
 
 #Halo mass function
-with open(currentPath + '../lookup_tables/massFunction.pkl', 'r') as myfile:
-	massFunctionDict = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/massFunction.pkl', 'rb') as myfile:
+	massFunctionDict = pickle.load(myfile, encoding='latin1')
 numberDensityMasses = massFunctionDict['mass']
 numberDensityValues = massFunctionDict['dndlog10m']
 numberDensityRedshifts = massFunctionDict['redshift']
@@ -282,7 +282,7 @@ def calcNumberDensity_genmf(logHaloMass, redshift, infile=currentPath + '../look
 	from scipy.interpolate import RectBivariateSpline
 	
 	with open(infile, 'rb') as myfile:
-		interpTable = pickle.load(myfile)
+		interpTable = pickle.load(myfile, encoding='latin1')
 
 	massFunctions = np.flipud(interpTable['massFunctions'])
 	massFunctions[np.where(~np.isfinite(massFunctions))[0]] = -99
@@ -298,7 +298,7 @@ Cooling Function Stuff
 
 '''
 with open('./cooling_curves/coolingFunction_SD93.pkl', 'rb') as myfile:
-	interpTable = pickle.load(myfile)
+	interpTable = pickle.load(myfile, encoding='latin1')
 
 logT = interpTable['logT']
 logLambda = interpTable['logLambda']
@@ -326,8 +326,8 @@ def coolingFunction(temperature, metallicity):
 Peak calculation stuff
 """
 
-with open(currentPath + '../lookup_tables/sigmaPeaks.pkl', 'r') as myfile:
-	sigmaData = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/sigmaPeaks.pkl', 'rb') as myfile:
+	sigmaData = pickle.load(myfile, encoding='latin1')
 sigmaMasses = sigmaData['masses']
 sigmaNus = sigmaData['nus']
 sigmaRedshifts = sigmaData['redshifts']
@@ -368,7 +368,7 @@ Binary Decay Stuff
 """
 
 with open(currentPath + '../lookup_tables/binaryDecayTable.pkl', 'rb') as myfile:
-	interpTable = pickle.load(myfile)
+	interpTable = pickle.load(myfile, encoding='latin1')
 tau = interpTable['taus']
 alpha = interpTable['alphas']
 tau2alpha = InterpolatedUnivariateSpline(tau, alpha)
@@ -454,8 +454,8 @@ def integrateM(M, f_Edd, timeStep, alpha=-1, t_Q=1e9, efficiency=0.1, tableau=ku
 Metal pollution for seeding
 """
 
-with open(currentPath + '../lookup_tables/scannapieco2003.pkl', 'r') as myfile:
-	scannapieco2003 = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/scannapieco2003.pkl', 'rb') as myfile:
+	scannapieco2003 = pickle.load(myfile, encoding='latin1')
 
 def calcUnpollutedProbability(masses, redshifts):
 	"""
@@ -509,8 +509,8 @@ def hopLumFunct(L,z):
 Kelly & Shen 2013 Eddington ratio distribution
 """
 
-with open(currentPath + '../lookup_tables/bh_data/Kelly_Shen_2013/KellyShen2013_fEdd.pkl', 'r') as mydata:
-	ks13 = pickle.load(mydata)
+with open(currentPath + '../lookup_tables/bh_data/Kelly_Shen_2013/KellyShen2013_fEdd.pkl', 'rb') as mydata:
+	ks13 = pickle.load(mydata, encoding='latin1')
 
 log_f_Edd = ks13['log_f_Edd']
 averageEddDistribution = ks13['averageDistribution']
@@ -601,25 +601,25 @@ def distribution_typeII(log_f_Edd, z, log_f_range=(-3.9,0.0), slope0=-0.38, slop
 	return output
 
 def draw_typeI(nvals, z, maxSigma=2.5):
-        """
-        Use rejection-comparison to draw Eddington ratios
-        """
+	"""
+	Use rejection-comparison to draw Eddington ratios
+	"""
 
 	z = np.minimum(z, 4.0)
 
-        logSpread = maxSigma*_sigma_typeI(z)
-        logCenter = _log_f_crit_typeI(z)
-        logBounds = np.vstack([logCenter-logSpread, logCenter+logSpread])
-        logProposedfEdd = logBounds[0,:] + np.random.random(nvals)*(logBounds[1,:]-logBounds[0,:])
-        probabilities = distribution_typeI(logProposedfEdd, z)
-        dice = np.random.random(nvals)
-        rejections = dice > probabilities
-        while np.any(rejections):
+	logSpread = maxSigma*_sigma_typeI(z)
+	logCenter = _log_f_crit_typeI(z)
+	logBounds = np.vstack([logCenter-logSpread, logCenter+logSpread])
+	logProposedfEdd = logBounds[0,:] + np.random.random(nvals)*(logBounds[1,:]-logBounds[0,:])
+	probabilities = distribution_typeI(logProposedfEdd, z)
+	dice = np.random.random(nvals)
+	rejections = dice > probabilities
+	while np.any(rejections):
 		logProposedfEdd[rejections] = np.random.random(size=sum(rejections)) * (logBounds[1,rejections]-logBounds[0,rejections]) + logBounds[0,rejections]
 		probabilities[rejections] = distribution_typeI(logProposedfEdd[rejections], z[rejections])
-                dice = np.random.random(sum(rejections))
-                rejections[rejections] = dice > probabilities[rejections]
-        return 10**logProposedfEdd
+		dice = np.random.random(sum(rejections))
+		rejections[rejections] = dice > probabilities[rejections]
+	return 10**logProposedfEdd
 
 def draw_typeII(nvals, z, logBounds=(-3.9,0.0), slope0=-0.38):
 	#Note:  z doesn't actually do anything.
@@ -630,40 +630,40 @@ def draw_typeII(nvals, z, logBounds=(-3.9,0.0), slope0=-0.38):
 '''
 #Rejection comparison is unnecessarily slow.  Using CDF sampling now.
 def draw_typeII_old(nvals, z, logBounds=(-3.9,0.0), slope0=-0.38):
-        """
-        Use rejection-comparison to draw Eddington ratios
-        """
+	"""
+	Use rejection-comparison to draw Eddington ratios
+	"""
 
-        z = np.minimum(z, 4.0)
+	z = np.minimum(z, 4.0)
 
-        logProposedfEdd = logBounds[0] + np.random.random(nvals)*(logBounds[1]-logBounds[0])
-        probabilities = distribution_typeII(logProposedfEdd, z, log_f_range=logBounds, slope0=slope0)
-        dice = np.random.random(nvals)
-        rejections = dice > probabilities
-        while np.any(rejections):
-                logProposedfEdd[rejections] = np.random.random(size=sum(rejections)) * (logBounds[1]-logBounds[0]) + logBounds[0]
-                probabilities[rejections] = distribution_typeII(logProposedfEdd[rejections], z[rejections], log_f_range=logBounds, slope0=slope0)
-                dice = np.random.random(sum(rejections))
-                rejections[rejections] = dice > probabilities[rejections]
-        return 10**logProposedfEdd
+	logProposedfEdd = logBounds[0] + np.random.random(nvals)*(logBounds[1]-logBounds[0])
+	probabilities = distribution_typeII(logProposedfEdd, z, log_f_range=logBounds, slope0=slope0)
+	dice = np.random.random(nvals)
+	rejections = dice > probabilities
+	while np.any(rejections):
+		logProposedfEdd[rejections] = np.random.random(size=sum(rejections)) * (logBounds[1]-logBounds[0]) + logBounds[0]
+		probabilities[rejections] = distribution_typeII(logProposedfEdd[rejections], z[rejections], log_f_range=logBounds, slope0=slope0)
+		dice = np.random.random(sum(rejections))
+		rejections[rejections] = dice > probabilities[rejections]
+	return 10**logProposedfEdd
 '''
 
 def randomWalk_typeI(fEdd, timeSteps, fEdd_MyrPerDex, z, maxSigma=2.5):
-        """
-        Move the Eddington ratio like a walker of a Markov Chain
-        """
+	"""
+	Move the Eddington ratio like a walker of a Markov Chain
+	"""
 
 	z = np.minimum(z, 4.0)
 
 	#Propose, calculate probabilities
-        nvals = len(fEdd)
+	nvals = len(fEdd)
 	logSpread = maxSigma*_sigma_typeI(z)
 	logCenter = _log_f_crit_typeI(z)
 	logBounds = np.vstack([logCenter-logSpread, logCenter+logSpread])
-        logPossibleRanges = [np.maximum(np.log10(fEdd) - timeSteps*1e3/fEdd_MyrPerDex, logBounds[0,:]), \
+	logPossibleRanges = [np.maximum(np.log10(fEdd) - timeSteps*1e3/fEdd_MyrPerDex, logBounds[0,:]), \
 	np.minimum(np.log10(fEdd) + timeSteps*1e3/fEdd_MyrPerDex, logBounds[1,:])]
-        logProposedfEdd = np.random.random(size=nvals) * (logPossibleRanges[1] - logPossibleRanges[0]) + logPossibleRanges[0]
-        probabilities = distribution_typeI(logProposedfEdd, z)
+	logProposedfEdd = np.random.random(size=nvals) * (logPossibleRanges[1] - logPossibleRanges[0]) + logPossibleRanges[0]
+	probabilities = distribution_typeI(logProposedfEdd, z)
 
 	#Renormalize to 1 if the central Eddington ratio is not included. This is meant to save time.
 	logCenters = _log_f_crit_typeI(z)
@@ -679,9 +679,9 @@ def randomWalk_typeI(fEdd, timeSteps, fEdd_MyrPerDex, z, maxSigma=2.5):
 		probabilities[tooHigh] /= highRenormalizations[tooHigh]
 
 	#Rejection comparison
-        dice = np.random.random(nvals)
-        rejections = np.greater(dice, probabilities)
-        while np.any(rejections):
+	dice = np.random.random(nvals)
+	rejections = np.greater(dice, probabilities)
+	while np.any(rejections):
 		logProposedfEdd[rejections] = np.random.random(size=sum(rejections)) * (logPossibleRanges[1][rejections] - logPossibleRanges[0][rejections]) + logPossibleRanges[0][rejections]
 		probabilities[rejections] = distribution_typeI(logProposedfEdd[rejections], z[rejections])
 
@@ -690,41 +690,41 @@ def randomWalk_typeI(fEdd, timeSteps, fEdd_MyrPerDex, z, maxSigma=2.5):
 			probabilities[tooLow & rejections] /= lowRenormalizations[tooLow & rejections]
 		if np.any(tooHigh & rejections):
 			probabilities[tooHigh & rejections] /= highRenormalizations[tooHigh & rejections]
-                dice = np.random.random(sum(rejections))
-                rejections[np.where(rejections)[0]] = np.greater(dice, probabilities[rejections])
-        return 10**logProposedfEdd
+		dice = np.random.random(sum(rejections))
+		rejections[np.where(rejections)[0]] = np.greater(dice, probabilities[rejections])
+	return 10**logProposedfEdd
 
 def randomWalk_typeII(fEdd, timeSteps, fEdd_MyrPerDex, z, logBounds=(-3.9,0.0)):
-        """
-        Move the Eddington ratio like a walker of a Markov Chain
-        """
+	"""
+	Move the Eddington ratio like a walker of a Markov Chain
+	"""
 
 	z = np.minimum(z, 4.0)
 
 	#Propose, calculate probabilities
-        nvals = len(fEdd)
-        logPossibleRanges = [np.maximum(np.log10(fEdd) - timeSteps*1e3/fEdd_MyrPerDex, logBounds[0]), \
+	nvals = len(fEdd)
+	logPossibleRanges = [np.maximum(np.log10(fEdd) - timeSteps*1e3/fEdd_MyrPerDex, logBounds[0]), \
 	np.minimum(np.log10(fEdd) + timeSteps*1e3/fEdd_MyrPerDex, logBounds[1])]
-        logProposedfEdd = np.random.random(size=nvals) * (logPossibleRanges[1] - logPossibleRanges[0]) + logPossibleRanges[0]
-        probabilities = distribution_typeII(logProposedfEdd, z)
+	logProposedfEdd = np.random.random(size=nvals) * (logPossibleRanges[1] - logPossibleRanges[0]) + logPossibleRanges[0]
+	probabilities = distribution_typeII(logProposedfEdd, z)
 
 	#Renormalize to the lowest Eddington ratio possible.  This is meant to save time.
 	renormalizations = distribution_typeII(logPossibleRanges[0], z)
 	probabilities /= renormalizations
 
 	#Rejection comparison
-        dice = np.random.random(nvals)
-        rejections = np.greater(dice, probabilities)
-        while np.any(rejections):
+	dice = np.random.random(nvals)
+	rejections = np.greater(dice, probabilities)
+	while np.any(rejections):
 		logProposedfEdd[rejections] = np.random.random(size=sum(rejections)) * (logPossibleRanges[1][rejections] - logPossibleRanges[0][rejections]) + logPossibleRanges[0][rejections]
 		probabilities[rejections] = distribution_typeII(logProposedfEdd[rejections], z[rejections])
 
 		#Renormalization again
 		probabilities[rejections] /= renormalizations[rejections]
 
-                dice = np.random.random(sum(rejections))
-                rejections[np.where(rejections)[0]] = np.greater(dice, probabilities[rejections])
-        return 10**logProposedfEdd
+		dice = np.random.random(sum(rejections))
+		rejections[np.where(rejections)[0]] = np.greater(dice, probabilities[rejections])
+	return 10**logProposedfEdd
 
 """
 Virial Mass to Velocity Dispersion
@@ -762,8 +762,8 @@ def makeGaussianSmoothingKernel(widthInBins, maxSigma=4):
 Map from L_bol to M_1450 calculated from Hopkins template
 """
 
-with open(currentPath + '../lookup_tables/hopkins_agn_template/LbolToM1450.pkl', 'r') as myfile:
-	mapLbolToM1450 = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/hopkins_agn_template/LbolToM1450.pkl', 'rb') as myfile:
+	mapLbolToM1450 = pickle.load(myfile, encoding='latin1')
 
 def LbolToM1450(Lbol):
 	"""
@@ -851,8 +851,8 @@ def lumFunctUeda(luminosities, redshift, A=3.26, logLstar=45.48, gamma1=0.89, ga
 	Lstar = 10**logLstar
 	return realNorm * ((luminosities/Lstar)**gamma1 + (luminosities/Lstar)**gamma2)**-1 * evolutionFactor
 
-with open(currentPath + '../lookup_tables/analyticMassFunctions.pkl', 'r') as myfile:
-	analyticMassFunction = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/analyticMassFunctions.pkl', 'rb') as myfile:
+	analyticMassFunction = pickle.load(myfile, encoding='latin1')
 
 amf_redshifts = analyticMassFunction['redshift']
 amf_masses = analyticMassFunction['m_bh']
@@ -871,8 +871,8 @@ def convolve(histogram, dexToConvolve, dexPerBin):
 LCDM Power Spectrum
 """
 
-with open(currentPath + '../lookup_tables/powerSpectra/powerSpectra.pkl', 'r') as myfile:
-	lcdm_ps = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/powerSpectra/powerSpectra.pkl', 'rb') as myfile:
+	lcdm_ps = pickle.load(myfile, encoding='latin1')
 
 lcdm_k = lcdm_ps['k'] * cosmology.h
 lcdm_P = lcdm_ps['powerSpectrum'] / cosmology.h**3
@@ -887,8 +887,8 @@ def calcPowerSpectrum(redshift, k):
 Delay time distribution
 """
 
-with open(currentPath + '../lookup_tables/mergerDelayTimes/mergerDelayTimeDistribution.pkl', 'r') as myfile:
-	delayTimeData = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/mergerDelayTimes/mergerDelayTimeDistribution.pkl', 'rb') as myfile:
+	delayTimeData = pickle.load(myfile, encoding='latin1')
 
 _inverseDelayTimeCDF = interp1d(delayTimeData['CDF'], delayTimeData['delayTime'], bounds_error=False, fill_value=(0,np.inf))
 
@@ -903,8 +903,8 @@ def drawMergerDelayTimes(number):
 Merger Probabilities
 """
 
-with open(currentPath + '../lookup_tables/mergerProbabilities/mergerProbabilityTable.pkl', 'r') as myfile:
-	mergerProbabilityData = pickle.load(myfile)
+with open(currentPath + '../lookup_tables/mergerProbabilities/mergerProbabilityTable.pkl', 'rb') as myfile:
+	mergerProbabilityData = pickle.load(myfile, encoding='latin1')
 
 _mergerProbabilityInterpolation = RectBivariateSpline(0.5*(np.log10(mergerProbabilityData['massRatioEdges'][1:]) + np.log10(mergerProbabilityData['massRatioEdges'][:-1])), \
 0.5*(mergerProbabilityData['logStellarMassEdges'][1:] + mergerProbabilityData['logStellarMassEdges'][:-1]), mergerProbabilityData['mergerProbability'], \

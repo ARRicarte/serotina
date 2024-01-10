@@ -8,17 +8,17 @@ Make every plot for a list of ensembles.
 #matplotlib.use('Agg')
 import numpy as np
 import os
-import calcMSigmaz0 as ms
-import plotBolometricLuminosityFunctions as lum
-import plotMassFunctions as mass
-import plotOccupationFractions as of
-from ensembleMSigma import EnsembleMSigma as ems
-import plotAssemblyHistory as pah
-import plotCoevolution as coev
-import plotHaloMassFunctions as haloMass
-import plotBlackHoleDensity as amd
-import plotMergedMassFraction as pmf
-import calcGravitationalWaveEvents as gwe
+from . import calcMSigmaz0 as ms
+from . import plotBolometricLuminosityFunctions as lum
+from . import plotMassFunctions as mass
+from . import plotOccupationFractions as of
+from .ensembleMSigma import EnsembleMSigma as ems
+from . import plotAssemblyHistory as pah
+from . import plotCoevolution as coev
+from . import plotHaloMassFunctions as haloMass
+from . import plotBlackHoleDensity as amd
+from . import plotMergedMassFraction as pmf
+from . import calcGravitationalWaveEvents as gwe
 
 def plotEverything(ensembles, colors, labels, outFolder, \
 	numberOfDexToConvolve=0.3, logHostMassRange=(10.6,15.0), n_mass=23, n_sample=20, iso=None, alphaBeta=None, \
@@ -30,9 +30,9 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Make a folder
 	if os.path.exists(outFolder):
-		print "Using existing folder " + outFolder + "for plotting output."
+		print("Using existing folder " + outFolder + "for plotting output.")
 	else:
-		print "Creating " + outFolder + " for plotting output."
+		print("Creating " + outFolder + " for plotting output.")
 		os.mkdir(outFolder)
 
 	#Special default
@@ -41,12 +41,12 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#M-sigma
 	if msigma0:
-		print "The M-sigma Relation"
+		print("The M-sigma Relation")
 		ms.calcMSigmaz0(ensembles, colors=colors, labels=labels, output=outFolder+'msigma.pdf', alphaBeta=alphaBeta, iso=iso, includeSatellites=False)
 
 	#Bolometric luminosity functions
 	if lum_funct:
-		print "Bolometric Luminosity Functions"
+		print("Bolometric Luminosity Functions")
 		redshiftSlices = [0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; xlim=(1e9,1e15); ylim=(1e-9,1e0); figsize=(8,8); plotUnconvolved=False
 		lumFuncts = [lum.calcBolometricLuminosityFunctions(e, redshiftSlices=redshiftSlices, logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample, logAGNLumBins=np.linspace(6,15,101)) for e in ensembles]
 		lum.plotLuminosityFunctions(lumFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, plotUnconvolved=plotUnconvolved, showCompleteness=False, \
@@ -54,7 +54,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Occupation Fractions
 	if occupation:
-		print "Occupation Fractions"
+		print("Occupation Fractions")
 		redshifts = [0.0,2.0,6.0]
 		curveLabels = ['z=0','z=2','z=6']
 		specialColors = ['royalblue', 'forestgreen', 'firebrick']
@@ -63,7 +63,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Mass-weighted Occupation Fraction
 	if mass_weighted_occupation:
-		print "Mass-weighted Occupation Fractions"
+		print("Mass-weighted Occupation Fractions")
 		curveLabels = ['z=0','z=2','z=6']
 		redshifts = [0.0,2.0,6.0]
 		specialColors = ['royalblue', 'forestgreen', 'firebrick']
@@ -72,7 +72,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Threshold Occupation
 	if threshold_occupation:
-		print "Threshold Occupation"
+		print("Threshold Occupation")
 		curveLabels = ['z=0','z=2','z=6']
 		redshifts = [0]
 		specialColors = ['royalblue', 'forestgreen', 'firebrick']
@@ -81,7 +81,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Mass functions
 	if mass_funct:
-		print "Mass Functions"
+		print("Mass Functions")
 		redshiftSlices = [0.6, 1.0, 2.0, 3.0, 4.0, 5.0]; xlim=(5e6,2e10); ylim=(1e-6,1e-1); figsize=(8,5)
 		massFuncts = [mass.calcMassFunctions(e, redshiftSlices=redshiftSlices, logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample) for e in ensembles]
 		mass.plotMassFunctions(massFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, figsize=figsize, xlim=xlim, ylim=ylim, \
@@ -89,7 +89,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Mass functions for broad-line quasars
 	if blq_mass_funct:
-		print "Mass Functions for Broad Line Quasars"
+		print("Mass Functions for Broad Line Quasars")
 		redshiftSlices = [0.6, 1.0, 1.6, 2.15, 3.2, 4.75]; xlim=(1e8,1e11); ylim=(2e-8,4e-3); figsize=(8,5); eddMin=1e-2
 		massFuncts = [mass.calcMassFunctions(e, redshiftSlices=redshiftSlices, weightByObscuration=True, logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample, eddMin=eddMin) for e in ensembles]
 		mass.plotMassFunctions(massFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, figsize=figsize, xlim=xlim, ylim=ylim, showCompleteness=False, \
@@ -97,7 +97,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Mass functions
 	if mass_funct_local:
-		print "Local Mass Functions"
+		print("Local Mass Functions")
 		redshiftSlices = [0.0]; xlim=(1e6,2e10); ylim=(1e-5,1e-1); figsize=(4,4)
 		massFuncts = [mass.calcMassFunctions(e, redshiftSlices=redshiftSlices, logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample) for e in ensembles]
 		mass.plotMassFunctions(massFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, figsize=figsize, xlim=xlim, ylim=ylim, \
@@ -105,12 +105,12 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Fraction of mass acquired by mergers
 	if mergerFraction:
-		print "Fraction of Mass from BH Mergers"
+		print("Fraction of Mass from BH Mergers")
 		pmf.plotMergedMassFraction(ensembles, colors=colors, labels=labels, output=outFolder+'mergerFraction.pdf')
 
 	#Evolution on the M-sigma plane
 	if ms_evolution:
-		print "M-sigma Evolution"
+		print("M-sigma Evolution")
 		redshifts = [0.2, 2.0, 4.0, 6.0, 8.0, 10.0]
 		cbranges = [[-5.0,0.7], [-5.0,-1.0]]
 		for e_index in range(len(ensembles)):
@@ -127,7 +127,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Luminosity Functions Beyond 6
 	if lum_past6:
-		print "Luminosity Functions Beyond 6"
+		print("Luminosity Functions Beyond 6")
 		redshiftSlices = [6.0, 7.0, 8.0, 9.0, 10.0, 12.0]; figsize=(8,5); xlim=(1e7,1e15); ylim=(1e-9,1e0); plotUnconvolved=False
 		lumFuncts = [lum.calcBolometricLuminosityFunctions(e, redshiftSlices=redshiftSlices, n_mass=n_mass, n_sample=n_sample, logRange=logHostMassRange) for e in ensembles]
 		lum.plotLuminosityFunctions(lumFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, plotUnconvolved=plotUnconvolved, showCompleteness=False, \
@@ -135,7 +135,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Mass Functions Beyond 6
 	if mass_past6:
-		print "Mass Functions Past 6."
+		print("Mass Functions Past 6.")
 		redshiftSlices = [6.0, 7.0, 8.0, 9.0, 10.0, 12.0]; xlim=(5e4,1e9); ylim=(1e-6,1e0); figsize=(8,5)
 		massFuncts = [mass.calcMassFunctions(e, redshiftSlices=redshiftSlices, n_mass=n_mass, n_sample=n_sample, logRange=logHostMassRange) for e in ensembles]
 		mass.plotMassFunctions(massFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, figsize=figsize, xlim=xlim, ylim=ylim, showCompleteness=False, \
@@ -143,7 +143,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Coevolution
 	if coevolution:
-		print "Coevolution"
+		print("Coevolution")
 		n_bootstrap = 1000
 		percentileRange = [14,86]
 		logBinEdges = np.linspace(3.5,10,13)
@@ -159,7 +159,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Convolution Illustration
 	if illustrateConvolution:
-		print "Convolution"
+		print("Convolution")
 		redshiftSlices = [0.2]; xlim=(1e9,1e15); ylim=(1e-9,1e0); figsize=(4,4)
 		#Assuming that the last ensemble is the one you want to plot
 		lumFuncts = [lum.calcBolometricLuminosityFunctions(ensembles[-1], redshiftSlices=redshiftSlices, n_mass=n_mass, n_sample=n_sample, logRange=logHostMassRange)]
@@ -168,7 +168,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Accreted Mass Density
 	if accretedMassDensity:
-		print "Accreted Mass Density"
+		print("Accreted Mass Density")
 		densities = []
 		densitiesAccreted = []
 		luminosityDensities = []
@@ -185,7 +185,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Assembly History, unnormalized
 	if assemblyHistoryUnnormed:
-		print "Assembly history, unnormalized"
+		print("Assembly history, unnormalized")
 		hostMasses = [1e11, 1e12, 1e13, 1e14, 1e15]
 		colors = ['indigo', 'darkcyan', 'darkgreen', 'goldenrod', 'firebrick']
 		assemblyHistories = []
@@ -196,7 +196,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Assembly History, normalized
 	if assemblyHistoryNormed:
-		print "Assembly history, normalized"
+		print("Assembly history, normalized")
 		hostMasses = [1e11, 1e12, 1e13, 1e14, 1e15]
 		colors = ['indigo', 'darkcyan', 'darkgreen', 'goldenrod', 'firebrick']
 		assemblyHistories = []
@@ -207,7 +207,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Relative M-sigma
 	if relativeMsigma:
-		print "Relative M-sigma"
+		print("Relative M-sigma")
 		hostMasses = [1e11, 1e12, 1e13, 1e14, 1e15]
 		colors = ['indigo', 'darkcyan', 'darkgreen', 'goldenrod', 'firebrick']
 		normalize = False
@@ -219,7 +219,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Halo Mass Functions
 	if halo_mass_funct:
-		print "Halo mass functions"
+		print("Halo mass functions")
 		redshiftSlices = [0.2, 0.6, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]; xlim=(1e6,1e15); ylim=(1e-6,1e3); figsize=(8,10)
 		#Assuming that the last ensemble is the one you want to plot
 		haloMassFunct = [haloMass.calcHaloMassFunctions(ensembles[-1], redshiftSlices=redshiftSlices, n_mass=n_mass, n_sample=n_sample, logRange=logHostMassRange)]
@@ -228,7 +228,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 
 	#Black hole merger events
 	if blackHoleMergers:
-		print "Black hole mergers"
+		print("Black hole mergers")
 		gw_packs_z = []
 		gw_packs_m = []
 		for e_index in range(len(ensembles)):

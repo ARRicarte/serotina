@@ -2,7 +2,7 @@ import numpy as np
 from .. import cosmology
 from .. import constants
 from scipy.interpolate import interp1d
-import absorptionFractions as af
+from . import absorptionFractions as af
 
 def lf_M1450(M1450, alpha=-2.04, Mstar=-25.8, beta=-2.8, Phistar=4.06e-9):
 	"""

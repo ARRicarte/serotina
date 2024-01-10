@@ -8,9 +8,9 @@ import numpy as np
 from ..helpers import sam_functions as sf
 import os
 import matplotlib.pyplot as plt
-import cPickle as pickle
+import pickle
 import gzip
-import addDensityLimits as adl
+from . import addDensityLimits as adl
 from .. import constants
 from .. import cosmology
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
@@ -24,7 +24,7 @@ def computeBlackHoleDensity(ensemble, n_mass=20, logRange=(11,15), n_sample=15, 
 
 	ensemble_files = [file for file in os.listdir(ensemble) if file[-5:]=='.pklz']
 	ensembleHostMasses = np.array([10**float(file.split('_')[-1].split('m')[1].split('n')[0]) for file in ensemble_files])
-	print "Reading from {0}".format(ensemble)
+	print("Reading from {0}".format(ensemble))
 
 	samplingFactor = float(n_mass) / (logRange[1] - logRange[0])
 	storageSet = False
@@ -32,13 +32,13 @@ def computeBlackHoleDensity(ensemble, n_mass=20, logRange=(11,15), n_sample=15, 
 	for f_index in range(len(ensemble_files)):
 		file = ensemble_files[f_index]
 		hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
-                n_tree = int(file.split('_')[-1].split('n')[1].split('.')[0])
+		n_tree = int(file.split('_')[-1].split('n')[1].split('.')[0])
 		#NOTE:  n_tree factor removed because averaging is used during bootstrapping instead of summing.
 		weight = sf.calcNumberDensity(hostHaloMass, z_host) / samplingFactor * cosmology.h**3
 
-                #Unpack data
-                with gzip.open(ensemble+'/'+file, 'r') as myfile:
-                        megaDict = pickle.load(myfile)
+		#Unpack data
+		with gzip.open(ensemble+'/'+file, 'r') as myfile:
+			megaDict = pickle.load(myfile)
 
 		#Create some storage arrays
 		if not storageSet:
@@ -133,32 +133,32 @@ def plotBlackHoleDensities(redshifts, densitiesTotal=None, figsize=(4,4), output
 		fig.show()
 
 def plotAccretionDensities(redshifts, luminosityDensities, figsize=(4,4), output=None, colors=['b'], labels=['Light'], xlim=(0,10), \
-        numberOfDexToConvolve=0.3, radiativeEfficiency=0.1):
+	numberOfDexToConvolve=0.3, radiativeEfficiency=0.1):
 
-        fig, ax = plt.subplots(figsize=figsize)
+	fig, ax = plt.subplots(figsize=figsize)
 
-        #This is the mean of a lognormal
-        convolutionCoefficient = np.exp(0.5 * (numberOfDexToConvolve * np.log(10))**2)
-        logc = np.log10(convolutionCoefficient)
-        for e_index in range(len(luminosityDensities)):
+	#This is the mean of a lognormal
+	convolutionCoefficient = np.exp(0.5 * (numberOfDexToConvolve * np.log(10))**2)
+	logc = np.log10(convolutionCoefficient)
+	for e_index in range(len(luminosityDensities)):
 		logUnitConversion = np.log10(constants.L_sun / constants.M_sun / radiativeEfficiency / constants.c**2 * constants.yr)
 		bottom = logc+luminosityDensities[e_index][:,0] + logUnitConversion
 		top = logc+luminosityDensities[e_index][:,1] + logUnitConversion
-                ax.fill_between(redshifts, bottom, top, color=colors[e_index], \
-                label=labels[e_index], alpha=0.7)
+		ax.fill_between(redshifts, bottom, top, color=colors[e_index], \
+		label=labels[e_index], alpha=0.7)
 
-        ax.set_xlabel('$z$', fontsize=12)
-        ax.set_ylabel(r'$\log_{10} \dot{\rho} \ [M_\odot \; \mathrm{yr}^{-1} \; \mathrm{Mpc}^{-3}]$', fontsize=12)
+	ax.set_xlabel('$z$', fontsize=12)
+	ax.set_ylabel(r'$\log_{10} \dot{\rho} \ [M_\odot \; \mathrm{yr}^{-1} \; \mathrm{Mpc}^{-3}]$', fontsize=12)
 	ax.set_xlim(0,15)
 	ax.set_ylim(-7,-3.5)
-        ax.legend(loc='lower left', frameon=False)
+	ax.legend(loc='lower left', frameon=False)
 
-        fig.tight_layout()
+	fig.tight_layout()
 
-        if output is not None:
-                fig.savefig(output)
-        else:
-                fig.show()
+	if output is not None:
+		fig.savefig(output)
+	else:
+		fig.show()
 
 if __name__ == '__main__':
 	'''
@@ -167,8 +167,8 @@ if __name__ == '__main__':
 	labels = ['Light-PL', 'Light-MS', 'Heavy-PL', 'Heavy-MS']
 	'''
 	ensembles = ['blq_dcbh_pmerge0.1_z4_072018', 'blq_popIII_pmerge0.1_z4_072018']
-        colors = ['firebrick', 'royalblue']
-        labels = ['Heavy', 'Light']
+	colors = ['firebrick', 'royalblue']
+	labels = ['Heavy', 'Light']
 
 	numberOfDexToConvolve = 0.3
 

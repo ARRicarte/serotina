@@ -10,7 +10,7 @@ from ..helpers import sam_functions as sf
 from scipy.integrate import simps
 from scipy.interpolate import interp1d
 from .. import constants
-import cPickle as pickle
+import pickle
 import gzip
 import os
 import pdb
@@ -182,8 +182,8 @@ class SAM_Analysis(object):
 			plt.legend(loc='lower right', frameon=False)
 
 		if plotData:
-			with open(currentPath + '../lookup_tables/bh_data/Saglia16.pkl', 'r') as myfile:
-				data = pickle.load(myfile)
+			with open(currentPath + '../lookup_tables/bh_data/Saglia16.pkl', 'rb') as myfile:
+				data = pickle.load(myfile, encoding='latin1')
 			data_sigma = np.array([10**logs[0] for logs in data['logsigma']])
 			data_M = np.array([10**logm[0] for logm in data['logM_BH']])
 			data_sigma_err = np.transpose(np.array([[10**logs[0]*(1.0-10**(-logs[1])),10**logs[0]*(10**logs[1]-1)] for logs in data['logsigma']]))
@@ -225,7 +225,7 @@ class SAM_Analysis(object):
 		#Clear frames
 		for zindex in range(len(self.redshift)):
 			#Make an image of M-sigma at this redshift.
-			print "Making frame"+str(zindex).zfill(3)
+			print("Making frame"+str(zindex).zfill(3))
 
 			#These are the plotted parameters.
 			m_bhcut = np.array(self.m_bh[zindex])
@@ -338,8 +338,8 @@ class SAM_Analysis(object):
 			scatterSymbols = ['o', 'o']
 
 		if plotData:
-			with open('./bh_data/Saglia16.pkl', 'r') as myfile:
-				data = pickle.load(myfile)
+			with open('./bh_data/Saglia16.pkl', 'rb') as myfile:
+				data = pickle.load(myfile, encoding='latin1')
 			data_sigma = np.array([10**logs[0] for logs in data['logsigma']])
 			data_M = np.array([10**logm[0] for logm in data['logM_BH']])
 			data_sigma_err = np.transpose(np.array([[10**logs[0]*(1.0-10**(-logs[1])),10**logs[0]*(10**logs[1]-1)] for logs in data['logsigma']]))
@@ -515,7 +515,7 @@ class SAM_Analysis(object):
 		os.system('rm ./frames/*')
 		for zindex in range(len(self.redshift)):
 			#Make an image of M-sigma at this redshift.
-			print "Making frame"+str(zindex).zfill(3)
+			print("Making frame"+str(zindex).zfill(3))
 
 			#These are the plotted parameters.
 			m_starcut = np.array(self.m_stars[zindex])
@@ -571,7 +571,7 @@ class SAM_Analysis(object):
 		#Create movie.
 		os.system(ffmpeg_alias+' -framerate 5 -i ./frames/frame%03d.png -s:v 840x720 -c:v libx264 \
 		-profile:v high -crf 23 -pix_fmt yuv420p -r 30 ./mp4s/'+mp4name+'.mp4')
-		print "Movie saved to ./mp4s/"+mp4name+".mp4."
+		print("Movie saved to ./mp4s/"+mp4name+".mp4.")
 
 if __name__ == "__main__":
 	analysis = SAM_Analysis(inpickle='test.pklz')

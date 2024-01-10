@@ -46,7 +46,7 @@ def logMstar(logMhalo, z):
 def Mstar(M_h, z):
 	M1_z = 10**M1(z)
 	beta_z = beta(z)
-        gamma_z = gamma(z)
-        N_z = N(z)
+	gamma_z = gamma(z)
+	N_z = N(z)
 
-        return 2 * N_z * M_h * ((M_h/M1_z)**-beta_z + (M_h/M1_z)**gamma_z)**-1
+	return 2 * N_z * M_h * ((M_h/M1_z)**-beta_z + (M_h/M1_z)**gamma_z)**-1

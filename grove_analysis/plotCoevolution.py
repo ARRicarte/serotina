@@ -1,7 +1,7 @@
 import numpy as np
 from ..helpers import sam_functions as sf
 import matplotlib.pyplot as plt
-import cPickle as pickle
+import pickle
 import os
 import gzip
 from ..helpers import smhm
@@ -9,7 +9,7 @@ currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 def calculateCoevolution(ensemble, logBinEdges, z, n_tree=15, n_bootstrap=1000, z_host=0, \
 	percentileRange=[5,95], ratio=True, stellar=True, eddMin=0):
-	print "Analyzing file {0}.".format(ensemble)
+	print("Analyzing file {0}.".format(ensemble))
 	
 	#Weird lists can be indexed list[treeIndex][binIndex]
 	sortedValues = [[[] for dummy in range(len(logBinEdges)-1)] for anotherDummy in range(n_tree)]
@@ -19,10 +19,10 @@ def calculateCoevolution(ensemble, logBinEdges, z, n_tree=15, n_bootstrap=1000, 
 	#Loop over all host halo masses.
 	for f_index in range(len(individualFiles)):
 		file = individualFiles[f_index]
-		with gzip.open(ensemble+'/'+file, 'r') as myfile:
+		with gzip.open(ensemble+'/'+file, 'rb') as myfile:
 			data = pickle.load(myfile)
 		hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
-		print "   M_h = {0}".format(np.log10(hostHaloMass))
+		print("   M_h = {0}".format(np.log10(hostHaloMass)))
 
 		#Note:  Not worrying about things like sampling factor & n_halo in the weight; it gets normalized away.
 		weight = sf.calcNumberDensity(hostHaloMass, z_host).tolist()

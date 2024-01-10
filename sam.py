@@ -8,13 +8,13 @@ from . import cosmology
 from . import constants
 from .helpers import sam_functions as sf
 from .helpers import bh_imfs, smhm, fabioMergerProbabilities
-import cPickle as pickle
+import pickle
 import gzip
-from util import crossmatch, findFirstDuplicate2, findFirstDuplicate2_2d, findDuplicates, primariesAndSecondaries, openTreeFile
-import accretion_recipes as acc
-import black_hole_mergers as bhb
+from . import accretion_recipes as acc
+from . import black_hole_mergers as bhb
 import time as tim
-import config
+from . import config
+from .util import crossmatch, findFirstDuplicate2, findFirstDuplicate2_2d, findDuplicates, primariesAndSecondaries 
 
 class SAM(object):
 

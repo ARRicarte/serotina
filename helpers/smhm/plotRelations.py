@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
-import smhm_m13 as smhm
+from . import smhm_m13 as relation
+#from . import smhm_b13 as relation
 import numpy as np
 
 def plotRelations(redshifts, logHaloMasses=np.linspace(8,15,100), ratio=False):
 	for z in redshifts:
-		logStellarMasses = smhm.logMstar(logHaloMasses, z)
+		logStellarMasses = relation.logMstar(logHaloMasses, z)
 		if z > 8:
 			lineStyle = ':'
 		else:

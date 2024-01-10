@@ -4,7 +4,7 @@ Functions to generate both pop III remnant and DCBH IMFs
 ARR: 05.21.16
 """
 
-import cPickle as pickle
+import pickle
 import numpy as np
 from scipy.interpolate import interp1d
 import os
@@ -16,8 +16,8 @@ currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 #Open pickle with IMF data, convert into a nice function. 
 table = currentPath + '../lookup_tables/bh_imfs/imf_ln07.pkl'
-with open(table, 'r') as myfile:
-	data = pickle.load(myfile)
+with open(table, 'rb') as myfile:
+	data = pickle.load(myfile, encoding='latin1')
 
 M_max_dcbh = data['M_BH'][-1]
 M_min_dcbh = data['M_BH'][0]
@@ -39,15 +39,15 @@ def drawDCBHMass(n_vals=1):
 	log_M_prop = np.random.rand(n_vals) * (log_m_bh[-1] - log_m_bh[0]) + log_m_bh[0]
 	probability = p_log_m_bh(log_M_prop)
 	dice = np.random.rand(n_vals)
-        rejections = np.where(dice > probability)[0]
+	rejections = np.where(dice > probability)[0]
 	while len(rejections) > 0:
-                newProps = np.random.random(len(rejections)) * (log_m_bh[-1] - log_m_bh[0]) + log_m_bh[0]
+		newProps = np.random.random(len(rejections)) * (log_m_bh[-1] - log_m_bh[0]) + log_m_bh[0]
 		newProbs = p_log_m_bh(newProps)
 		dice = np.random.rand(len(rejections))
-                log_M_prop[rejections] = newProps
-                probability[rejections] = newProbs
-                rejections = rejections[np.where(dice > newProbs)[0]]
-        return 10**log_M_prop
+		log_M_prop[rejections] = newProps
+		probability[rejections] = newProbs
+		rejections = rejections[np.where(dice > newProbs)[0]]
+	return 10**log_M_prop
 
 ###########
 ##Pop III##

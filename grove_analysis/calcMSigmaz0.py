@@ -2,7 +2,7 @@ import numpy as np
 import os
 from .. import sam_functions as sf
 import matplotlib.pyplot as plt
-import cPickle as pickle
+import pickle
 import gzip
 from scipy.optimize import curve_fit
 from ..helpers import smhm
@@ -35,7 +35,7 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 		ensemble_files = [file for file in os.listdir(ensemble_folder) if file[-5:]=='.pklz']
 
 		for file in ensemble_files:
-			with gzip.open(ensemble_folder+'/'+file, 'r') as myfile:
+			with gzip.open(ensemble_folder+'/'+file, 'rb') as myfile:
 				megaDict = pickle.load(myfile)
 				selection = megaDict['redshift'] == 0
 				if not includeSatellites:
@@ -55,8 +55,8 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 			axarr[i,j].plot(extremeSigmas, oplotMasses, linewidth=2, linestyle=':', color='k', zorder=2, label='Burst Limit')
 
 		if plotData:
-			with open(currentPath + '../lookup_tables/bh_data/Saglia16.pkl', 'r') as myfile:
-				data = pickle.load(myfile)
+			with open(currentPath + '../lookup_tables/bh_data/Saglia16.pkl', 'rb') as myfile:
+				data = pickle.load(myfile, encoding='latin1')
 			data_sigma = np.array([10**logs[0] for logs in data['logsigma']])
 			data_M = np.array([10**logm[0] for logm in data['logM_BH']])
 			data_sigma_err = np.transpose(np.array([[10**logs[0]*(1.0-10**(-logs[1])),10**logs[0]*(10**logs[1]-1)] for logs in data['logsigma']]))
@@ -72,16 +72,16 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 		#Let's fit a line, but only past minSigmaFit km/s
 		if fitALine:
 			alphaBetaFit, covarianceMatrix = curve_fit(line, np.log10(sigma[(m_bh>0) & (sigma>minSigmaFit)]/200.0), np.log10(m_bh[(m_bh>0) & (sigma>minSigmaFit)]), p0=(8,4))
-			print "A linear regression yields alpha = {0} +/- {1}, beta = {2} +/- {3}".format(alphaBetaFit[0], covarianceMatrix[0][0]**0.5, alphaBetaFit[1], covarianceMatrix[1][1]**0.5)
+			print("A linear regression yields alpha = {0} +/- {1}, beta = {2} +/- {3}".format(alphaBetaFit[0], covarianceMatrix[0][0]**0.5, alphaBetaFit[1], covarianceMatrix[1][1]**0.5))
 			
 			#Then, let's try and estimate the intrinsic scatter already present in this relation.
 			logPerfectMasses = alphaBetaFit[0] + alphaBetaFit[1] * np.log10(sigma[(m_bh>0) & (sigma>minSigmaFit)]/200.0)
 			scatter = np.std(np.log10(m_bh[(m_bh>0) & (sigma>minSigmaFit)]) - logPerfectMasses)
-			print "Intrinsic scatter is estimated at {0} dex.".format(scatter)
+			print("Intrinsic scatter is estimated at {0} dex.".format(scatter))
 
 			offsets = np.array([m_bh[k] / sigmaToM(sigma[k], alphaBeta=alphaBeta[e_index]) for k in range(len(m_bh)) if sigma[k]>minSigmaFit])
-			print "On average, the ratio between output M and expected M is {0}.".format(10**np.average(np.log10(offsets[offsets != 0])))
-			print "Alternatively, the median ratio is {0}.".format(10**np.median(np.log10(offsets[offsets != 0])))
+			print("On average, the ratio between output M and expected M is {0}.".format(10**np.average(np.log10(offsets[offsets != 0]))))
+			print("Alternatively, the median ratio is {0}.".format(10**np.median(np.log10(offsets[offsets != 0]))))
 
 		axarr[i,j].text(25, 2e10, labels[e_index], fontsize=12)
 		axarr[i,j].set_xlim((xlim[0],xlim[1]))

@@ -4,11 +4,10 @@ ARR: 04.19.17
 Based on calcMassFunctions, just taking one aspect and allowing multiple ensembles as argument.
 """
 
-from __future__ import division
 import numpy as np
 import os
 import gzip
-import cPickle as pickle
+import pickle
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -38,7 +37,7 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 
 	samplingFactor = float(n_mass) / (logRange[1] - logRange[0])
 	ensemble_files = [file for file in os.listdir(ensemble) if file[-5:]=='.pklz']
-	print "Reading from {0}".format(ensemble)
+	print("Reading from {0}".format(ensemble))
 	
 	for f_index in range(len(ensemble_files)):
 		file = ensemble_files[f_index]
@@ -54,7 +53,7 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 		for z_index in range(len(redshiftSlices)):
 			closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 			if np.abs(closestRedshift - redshiftSlices[z_index]) > 0.1:
-				print "Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift)
+				print("Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift))
 			redshiftMask = (megaDict['redshift'] == closestRedshift)
 			combinedMask = redshiftMask & luminousMask
 			if np.any(combinedMask):
@@ -72,17 +71,17 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 
 	#Compute the luminosity function from this 2D histogram
 	for z_index in range(len(redshiftSlices)):
-		print "z = {0}:".format(redshiftSlices[z_index])
+		print("z = {0}:".format(redshiftSlices[z_index]))
 		closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftSlices[z_index]))]
 
 		#Collect the pieces for bootstrapping
-		print "   Creating bootstrap pieces."
+		print("   Creating bootstrap pieces.")
 		for treeIndex in range(n_sample):
 			agnLumFunctionPieces[:,z_index,treeIndex] = np.histogram(np.log10(agn_luminosities[z_index][agn_fileIndices[z_index]==treeIndex+1]), bins=logAGNLumBins, \
 			weights=agn_weights[z_index][agn_fileIndices[z_index]==treeIndex+1]/np.diff(logAGNLumBins)[0])[0]
 
 		#Bootstrapping!
-		print "   Computing luminosity function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap)
+		print("   Computing luminosity function by bootstrapping.  Number of samples = {0}.".format(n_bootstrap))
 		for boot in range(n_bootstrap):
 			randomFileNumbers = np.random.randint(0, n_sample, n_sample)
 			agnLumFunctions[:,z_index,boot] = np.sum(agnLumFunctionPieces[:,z_index,randomFileNumbers], axis=1)
@@ -186,8 +185,8 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 						axarr[i,j].text(lynxLimit[z_index]*1.3, 10**np.average(np.log10(ylim)-1.5), 'Lynx Limit', rotation=90, fontsize=10, color='dodgerblue')
 				if showAxis:
 					axarr[i,j].plot([axisLimit[z_index],axisLimit[z_index]], [1e-99,1e99], lw=1, ls='--', color='indigo')
-                                        if (i==figShape[0]-1) & (j==figShape[1]-1):
-                                                axarr[i,j].text(axisLimit[z_index]*1.3, 10**np.average(np.log10(ylim)-1.5), 'AXIS 32Ms', rotation=90, fontsize=10, color='indigo')
+					if (i==figShape[0]-1) & (j==figShape[1]-1):
+						axarr[i,j].text(axisLimit[z_index]*1.3, 10**np.average(np.log10(ylim)-1.5), 'AXIS 32Ms', rotation=90, fontsize=10, color='indigo')
 
 				if showOnoue & (6 in redshiftSlices):
 					axarr[i,j].fill_between([], [], [], color='k', alpha=0.7, label='O17')
@@ -243,41 +242,41 @@ def _computeExpectedNumbers(xaxis, yaxis_range):
 		return expectedNumber, propagatedError
 
 def plotLynxDetections(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], figsize=(8,8), \
-        figShape=None, numberOfDexToConvolve=0.3, xlim=(1e9,1e15), ylim=(1e-2,1e4), output=None, fieldOfView_Lynx=400.0, fieldOfView_Chandra=25.0, integrate=True):
+	figShape=None, numberOfDexToConvolve=0.3, xlim=(1e9,1e15), ylim=(1e-2,1e4), output=None, fieldOfView_Lynx=400.0, fieldOfView_Chandra=25.0, integrate=True):
 
 	#Initialize figure
-        if figShape is None:
-                if len(redshiftSlices) >= 3:
-                        figShape = (np.ceil(float(len(redshiftSlices))/3).astype(int), 3)
-                else:
-                        figShape = (1,len(redshiftSlices))
-        fig, axarr = plt.subplots(figShape[0], figShape[1], figsize=figsize, sharex=False, sharey=False)
+	if figShape is None:
+		if len(redshiftSlices) >= 3:
+			figShape = (np.ceil(float(len(redshiftSlices))/3).astype(int), 3)
+		else:
+			figShape = (1,len(redshiftSlices))
+	fig, axarr = plt.subplots(figShape[0], figShape[1], figsize=figsize, sharex=False, sharey=False)
 
-        #Annoyingly, if figShape[i] == 1, then axarr doesn't have enough dimensions.
-        if not hasattr(axarr, '__len__'):
-                axarr = np.array([axarr])
-        if figShape[0] == 1:
-                axarr = axarr.reshape(1, len(axarr))
-        elif figShape[1] == 1:
-                axarr = axarr.reshape(len(axarr), 1)
+	#Annoyingly, if figShape[i] == 1, then axarr doesn't have enough dimensions.
+	if not hasattr(axarr, '__len__'):
+		axarr = np.array([axarr])
+	if figShape[0] == 1:
+		axarr = axarr.reshape(1, len(axarr))
+	elif figShape[1] == 1:
+		axarr = axarr.reshape(len(axarr), 1)
 
 	lynxLimit = calcLynxLimit(redshiftSlices)
 	chandraLimit = calcChandraLimit(redshiftSlices)
 	fov_correction_Lynx = fieldOfView_Lynx * (np.pi / 180.0 / 60)**2 / (4*np.pi)
 	fov_correction_Chandra = fieldOfView_Chandra * (np.pi / 180.0 / 60)**2 / (4*np.pi)
 
-        for e_index in range(len(lumFuncts)):
-                logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
+	for e_index in range(len(lumFuncts)):
+		logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
 		if integrate:
-			print labels[e_index]+":"
+			print(labels[e_index]+":")
 
-                for z_index in range(len(redshiftSlices)):
-                        i = int(z_index / figShape[1])
-                        j = z_index % figShape[1]
+		for z_index in range(len(redshiftSlices)):
+			i = int(z_index / figShape[1])
+			j = z_index % figShape[1]
 
 			cosmologyWeighting = cf.computedVdz(redshiftSlices[z_index])
 
-                        xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
+			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
 			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
 			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
 			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
@@ -302,80 +301,80 @@ def plotLynxDetections(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1,
 				number_cdfs, error_cdfs = _computeExpectedNumbers(xrange_cdfs, raw_numbers_cdfs)
 				number_lynx, error_lynx = _computeExpectedNumbers(xrange_lynx, raw_numbers_lynx)
 
-				print "   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Lynx".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_lynx, error_lynx)
+				print("   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Lynx".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_lynx, error_lynx))
 
 			#If this is the last time around, do some formatting.
-                        if e_index == len(lumFuncts)-1:
-                                axarr[i,j].text(xlim[1]*3e-3,ylim[1]*3e-1,r'$z={0}$'.format(redshiftSlices[z_index]), fontsize=12)
+			if e_index == len(lumFuncts)-1:
+				axarr[i,j].text(xlim[1]*3e-3,ylim[1]*3e-1,r'$z={0}$'.format(redshiftSlices[z_index]), fontsize=12)
 				axarr[i,j].plot([lynxLimit[z_index],lynxLimit[z_index]], [1e-99,1e99], lw=1, ls='--', color='dodgerblue')
 				#axarr[i,j].plot([lynxLimit[z_index]*1e2,lynxLimit[z_index]*1e2], [1e-99,1e99], lw=1, ls='-.', color='violet')
 				if (i==figShape[0]-1) & (j==figShape[1]-1):
 					axarr[i,j].text(lynxLimit[z_index]*1.3, 10**np.average(np.log10(ylim))*5e1, 'Lynx Limit', rotation=90, fontsize=10, color='dodgerblue')
 					#axarr[i,j].text(lynxLimit[z_index]*1e2*1.3, 10**np.average(np.log10(ylim))*5e1, 'CDF-S Limit', rotation=90, fontsize=10, color='violet')
-                                if (i==figShape[0]-1) & (j==figShape[1]-1):
-                                        axarr[i,j].legend(frameon=False, fontsize=9, loc='lower right')
+				if (i==figShape[0]-1) & (j==figShape[1]-1):
+					axarr[i,j].legend(frameon=False, fontsize=9, loc='lower right')
 
-        #Loop again for final formatting
-        for i in range(axarr.shape[0]):
-                for j in range(axarr.shape[1]):
-                        axarr[i,j].set_xscale('log', nonposx='clip', nonposy='clip')
-                        axarr[i,j].set_yscale('log', nonposx='clip', nonposy='clip')
-                        if i==figShape[0]-1:
-                                axarr[i,j].set_xlabel(r'$L_\bullet \ [L_\odot]$', fontsize=12)
-                        if j==0:
-                                axarr[i,j].set_ylabel(r'$d^2 N_\mathrm{obs}/d\logL_\bullet dz$', fontsize=12)
+	#Loop again for final formatting
+	for i in range(axarr.shape[0]):
+		for j in range(axarr.shape[1]):
+			axarr[i,j].set_xscale('log', nonposx='clip', nonposy='clip')
+			axarr[i,j].set_yscale('log', nonposx='clip', nonposy='clip')
+			if i==figShape[0]-1:
+				axarr[i,j].set_xlabel(r'$L_\bullet \ [L_\odot]$', fontsize=12)
+			if j==0:
+				axarr[i,j].set_ylabel(r'$d^2 N_\mathrm{obs}/d\logL_\bullet dz$', fontsize=12)
 			if j>0:
 				axarr[i,j].set_xticks(np.logspace(9,15,4))
 			if i!=figShape[0]-1:
 				axarr[i,j].set_xticks([])
-                        axarr[i,j].set_xlim(xlim[0],xlim[1])
-                        axarr[i,j].set_ylim(ylim[0],ylim[1])
+			axarr[i,j].set_xlim(xlim[0],xlim[1])
+			axarr[i,j].set_ylim(ylim[0],ylim[1])
 
-        fig.tight_layout()
-        fig.subplots_adjust(hspace=0,wspace=0)
+	fig.tight_layout()
+	fig.subplots_adjust(hspace=0,wspace=0)
 	for i in range(axarr.shape[0]):
-                for j in range(axarr.shape[1]):
-                        if j > 0:
-                                axarr[i,j].set_yticks([])
-                        elif i != axarr.shape[0]-1:
-                                currentyTicks = axarr[i,j].get_yticks()
-                                newyTicks = [tick for tick in currentyTicks if ((tick > ylim[0]) & (tick <= ylim[1]))]
-                                axarr[i,j].set_yticks(newyTicks)
+		for j in range(axarr.shape[1]):
+			if j > 0:
+				axarr[i,j].set_yticks([])
+			elif i != axarr.shape[0]-1:
+				currentyTicks = axarr[i,j].get_yticks()
+				newyTicks = [tick for tick in currentyTicks if ((tick > ylim[0]) & (tick <= ylim[1]))]
+				axarr[i,j].set_yticks(newyTicks)
 
-        if output is not None:
-                fig.savefig(output)
-        else:
-                fig.show()
+	if output is not None:
+		fig.savefig(output)
+	else:
+		fig.show()
 
 def plotLynxDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], figsize=(4,4), \
-        numberOfDexToConvolve=0.3, ylim=(0,1e4), output=None, fieldOfView_Lynx=400.0, fieldOfView_Chandra=25.0, spitTable=False, fluxLimit_cgs=1e-19, \
+	numberOfDexToConvolve=0.3, ylim=(0,1e4), output=None, fieldOfView_Lynx=400.0, fieldOfView_Chandra=25.0, spitTable=False, fluxLimit_cgs=1e-19, \
 	computeAverageFlux=False):
 
 	#Calculations
-        lynxLimit = calcLynxLimit(redshiftSlices, fluxLimit_cgs=fluxLimit_cgs)
+	lynxLimit = calcLynxLimit(redshiftSlices, fluxLimit_cgs=fluxLimit_cgs)
 	chandraLimit = calcChandraLimit(redshiftSlices)
-        fov_correction_Lynx = fieldOfView_Lynx * (np.pi / 180.0 / 60)**2 / (4*np.pi)
-        fov_correction_Chandra = fieldOfView_Chandra * (np.pi / 180.0 / 60)**2 / (4*np.pi)
+	fov_correction_Lynx = fieldOfView_Lynx * (np.pi / 180.0 / 60)**2 / (4*np.pi)
+	fov_correction_Chandra = fieldOfView_Chandra * (np.pi / 180.0 / 60)**2 / (4*np.pi)
 	detectionList_Lynx = [np.zeros((len(redshiftSlices),2)) for dummy in range(len(lumFuncts))]
 	detectionList_Chandra = [np.zeros((len(redshiftSlices),2)) for dummy in range(len(lumFuncts))]
 
-        for e_index in range(len(lumFuncts)):
-                logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
+	for e_index in range(len(lumFuncts)):
+		logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
 		if not spitTable:
-			print labels[e_index]+":"
-                for z_index in range(len(redshiftSlices)):
-                        cosmologyWeighting = cf.computedVdz(redshiftSlices[z_index])
+			print(labels[e_index]+":")
+		for z_index in range(len(redshiftSlices)):
+			cosmologyWeighting = cf.computedVdz(redshiftSlices[z_index])
 
-                        xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
-                        nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-                        kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
-                        convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
-                        convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
+			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
+			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
+			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
+			convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
 
-                        #NOTE:  Applying Field of View correction later, since it's different for these two instruments.
-                        observableFraction = af.typeIProbability(xaxis, redshiftSlices[z_index])
-                        observedBottom = cosmologyWeighting*observableFraction*convolvedBottom
-                        observedTop = cosmologyWeighting*observableFraction*convolvedTop
+			#NOTE:  Applying Field of View correction later, since it's different for these two instruments.
+			observableFraction = af.typeIProbability(xaxis, redshiftSlices[z_index])
+			observedBottom = cosmologyWeighting*observableFraction*convolvedBottom
+			observedTop = cosmologyWeighting*observableFraction*convolvedTop
 
 			observedByChandra = xaxis > chandraLimit[z_index]
 			observedByLynx = xaxis > lynxLimit[z_index]
@@ -390,34 +389,34 @@ def plotLynxDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 			detectionList_Lynx[e_index][z_index,:] = np.array([number_lynx-error_lynx,number_lynx+error_lynx])
 			detectionList_Chandra[e_index][z_index,:] = np.array([number_cdfs-error_cdfs,number_cdfs+error_cdfs])
 			if not spitTable:
-				print "   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Lynx".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_lynx, error_lynx)
+				print("   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Lynx".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_lynx, error_lynx))
 
 			if computeAverageFlux:
 				averageLuminosity = np.sum(xaxis[observedByLynx] * np.mean(raw_numbers_lynx, axis=0)) / np.sum(np.mean(raw_numbers_lynx, axis=0)) * constants.L_sun / constants.erg
 				dL = cf.computeLuminosityDistance(redshiftSlices[z_index]) * 1e6 * constants.pc * 1e2
 				averageFlux = averageLuminosity / (4 * np.pi * dL**2)
-				print "  The average flux at z={0} is {1:3.2e} erg/s/cm^2.".format(redshiftSlices[z_index], averageFlux)
+				print("  The average flux at z={0} is {1:3.2e} erg/s/cm^2.".format(redshiftSlices[z_index], averageFlux))
 
 	if spitTable:
 		headerString = "Model"
 		for z_index in range(len(redshiftSlices)):
 			headerString += " & z = {0:2.0f}".format(redshiftSlices[z_index])
 		headerString += r" \\"
-		print headerString
+		print(headerString)
 		for e_index in range(len(lumFuncts)):
 			outstring = labels[e_index]
 			for z_index in range(len(redshiftSlices)):
 				outstring += r" & ${0} \pm {1}$".format(np.mean(detectionList_Lynx[e_index][z_index,:]), np.squeeze(np.diff(detectionList_Lynx[e_index][z_index,:])))
 			outstring += r" \\"
-			print outstring
+			print(outstring)
 
 	#Plotting
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+	fig, ax = plt.subplots(1, 1, figsize=figsize)
 
 	for e_index in range(len(lumFuncts)):
 		for z_index in range(len(redshiftSlices)): 
 			ax.add_patch(patches.Rectangle((redshiftSlices[z_index]-0.5, detectionList_Lynx[e_index][z_index,0]), 1, \
-                        (detectionList_Lynx[e_index][z_index,1]-detectionList_Lynx[e_index][z_index,0]), color=colors[e_index], alpha=0.7))
+			(detectionList_Lynx[e_index][z_index,1]-detectionList_Lynx[e_index][z_index,0]), color=colors[e_index], alpha=0.7))
 		ax.fill_between([], [], [], color=colors[e_index], label=labels[e_index], alpha=0.7)
 
 	ax.legend(frameon=False)
@@ -428,41 +427,41 @@ def plotLynxDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 	ax.set_xlim(redshiftSlices[0]-0.5,redshiftSlices[-1]+0.5)
 	ax.set_ylim(ylim[0],ylim[1])
 
-        fig.tight_layout()
+	fig.tight_layout()
 
-        if output is not None:
-                fig.savefig(output)
-        else:
-                fig.show()
+	if output is not None:
+		fig.savefig(output)
+	else:
+		fig.show()
 
 def plotAxisDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], figsize=(4,4), \
-        numberOfDexToConvolve=0.3, ylim=(0,1e4), output=None, fieldOfView_Axis=1800.0, fieldOfView_Chandra=25.0, spitTable=False, fluxLimit_cgs=1e-19):
+	numberOfDexToConvolve=0.3, ylim=(0,1e4), output=None, fieldOfView_Axis=1800.0, fieldOfView_Chandra=25.0, spitTable=False, fluxLimit_cgs=1e-19):
 
 	#Calculations
-        axisLimit = calcAxisLimit(redshiftSlices, fluxLimit_cgs=fluxLimit_cgs)
+	axisLimit = calcAxisLimit(redshiftSlices, fluxLimit_cgs=fluxLimit_cgs)
 	chandraLimit = calcChandraLimit(redshiftSlices)
-        fov_correction_Axis = fieldOfView_Axis * (np.pi / 180.0 / 60)**2 / (4*np.pi)
-        fov_correction_Chandra = fieldOfView_Chandra * (np.pi / 180.0 / 60)**2 / (4*np.pi)
+	fov_correction_Axis = fieldOfView_Axis * (np.pi / 180.0 / 60)**2 / (4*np.pi)
+	fov_correction_Chandra = fieldOfView_Chandra * (np.pi / 180.0 / 60)**2 / (4*np.pi)
 	detectionList_Axis = [np.zeros((len(redshiftSlices),2)) for dummy in range(len(lumFuncts))]
 	detectionList_Chandra = [np.zeros((len(redshiftSlices),2)) for dummy in range(len(lumFuncts))]
 
-        for e_index in range(len(lumFuncts)):
-                logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
+	for e_index in range(len(lumFuncts)):
+		logAGNLumBins, agnLumFunctionRange = lumFuncts[e_index]
 		if not spitTable:
-			print labels[e_index]+":"
-                for z_index in range(len(redshiftSlices)):
-                        cosmologyWeighting = cf.computedVdz(redshiftSlices[z_index])
+			print(labels[e_index]+":")
+		for z_index in range(len(redshiftSlices)):
+			cosmologyWeighting = cf.computedVdz(redshiftSlices[z_index])
 
-                        xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
-                        nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-                        kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
-                        convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
-                        convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
+			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
+			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
+			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
+			convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
 
-                        #NOTE:  Applying Field of View correction later, since it's different for these two instruments.
-                        observableFraction = af.typeIProbability(xaxis, redshiftSlices[z_index])
-                        observedBottom = cosmologyWeighting*observableFraction*convolvedBottom
-                        observedTop = cosmologyWeighting*observableFraction*convolvedTop
+			#NOTE:  Applying Field of View correction later, since it's different for these two instruments.
+			observableFraction = af.typeIProbability(xaxis, redshiftSlices[z_index])
+			observedBottom = cosmologyWeighting*observableFraction*convolvedBottom
+			observedTop = cosmologyWeighting*observableFraction*convolvedTop
 
 			observedByChandra = xaxis > chandraLimit[z_index]
 			observedByAxis = xaxis > axisLimit[z_index]
@@ -477,28 +476,28 @@ def plotAxisDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 			detectionList_Axis[e_index][z_index,:] = np.array([number_axis-error_axis,number_axis+error_axis])
 			detectionList_Chandra[e_index][z_index,:] = np.array([number_cdfs-error_cdfs,number_cdfs+error_cdfs])
 			if not spitTable:
-				print "   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Axis".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_axis, error_axis)
+				print("   z={0}, N={1} +/- {2} for CDF-S, N={3} +/- {4} for Axis".format(redshiftSlices[z_index], number_cdfs, error_cdfs, number_axis, error_axis))
 
 	if spitTable:
 		headerString = "Model"
 		for z_index in range(len(redshiftSlices)):
 			headerString += " & z = {0:2.0f}".format(redshiftSlices[z_index])
 		headerString += r" \\"
-		print headerString
+		print(headerString)
 		for e_index in range(len(lumFuncts)):
 			outstring = labels[e_index]
 			for z_index in range(len(redshiftSlices)):
 				outstring += r" & ${0} \pm {1}$".format(np.mean(detectionList_Axis[e_index][z_index,:]), np.squeeze(np.diff(detectionList_Axis[e_index][z_index,:])))
 			outstring += r" \\"
-			print outstring
+			print(outstring)
 
 	#Plotting
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+	fig, ax = plt.subplots(1, 1, figsize=figsize)
 
 	for e_index in range(len(lumFuncts)):
 		for z_index in range(len(redshiftSlices)): 
 			ax.add_patch(patches.Rectangle((redshiftSlices[z_index]-0.5, detectionList_Axis[e_index][z_index,0]), 1, \
-                        (detectionList_Axis[e_index][z_index,1]-detectionList_Axis[e_index][z_index,0]), color=colors[e_index], alpha=0.7))
+			(detectionList_Axis[e_index][z_index,1]-detectionList_Axis[e_index][z_index,0]), color=colors[e_index], alpha=0.7))
 		ax.fill_between([], [], [], color=colors[e_index], label=labels[e_index], alpha=0.7)
 
 	ax.legend(frameon=False)
@@ -509,12 +508,12 @@ def plotAxisDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 	ax.set_xlim(redshiftSlices[0]-0.5,redshiftSlices[-1]+0.5)
 	ax.set_ylim(ylim[0],ylim[1])
 
-        fig.tight_layout()
+	fig.tight_layout()
 
-        if output is not None:
-                fig.savefig(output)
-        else:
-                fig.show()
+	if output is not None:
+		fig.savefig(output)
+	else:
+		fig.show()
 
 def saveLuminosityFunctions_pickle(lumFuncts, outputName, labels, redshifts):
 	#Just save a pickled dictionary
@@ -524,7 +523,7 @@ def saveLuminosityFunctions_pickle(lumFuncts, outputName, labels, redshifts):
 def saveLuminosityFunctions_text(lumFuncts, outputName, labels, redshiftSlices, numberOfDexToConvolve=0.3):
 	#outputName should be a folder
 	if os.path.exists(outputName):
-		print "Using existing folder, "+outputName
+		print("Using existing folder, "+outputName)
 	else:
 		os.mkdir(outputName)
 

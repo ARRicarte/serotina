@@ -4,11 +4,10 @@ ARR:  03.13.17
 Create 2D maps of M-Sigma for the whole ensemble
 """
 
-from __future__ import division
 import numpy as np
 import os
 import gzip
-import cPickle as pickle
+import pickle
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -47,7 +46,7 @@ class EnsembleMSigma(object):
 			file = self.ensemble_files[f_index]
 			hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
 			nHalos = int(file.split('_')[-1].split('n')[1].split('.')[0])
-			with gzip.open(self.ensemble_folder+'/'+file, 'r') as myfile:
+			with gzip.open(self.ensemble_folder+'/'+file, 'rb') as myfile:
 				megaDict = pickle.load(myfile)
 			uniqueRedshifts = np.unique(megaDict['redshift'])
 			

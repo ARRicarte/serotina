@@ -1,5 +1,5 @@
 import numpy as np
-import sam_functions as sf
+from . import sam_functions as sf
 from ..cosmology import cosmology_functions as cf
 from .. import constants
 
