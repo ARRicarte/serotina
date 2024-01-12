@@ -343,11 +343,10 @@ class SAM(object):
 			mergerKicks = bhb.calcRemnantKick(self.m_bh[primaries], self.m_bh[secondaries], self.spin_bh[primaries], self.spin_bh[secondaries], theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2)
 			
 			#Compare kick velocity to Choksi formula
+			#Note:  Using the escape velocity here is pretty unfair.  In reality, it depends on baryonic distribution, dark matter profile, etc., all of which are time and orbit dependent.
 			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], sf.t2z(times)))
 		else:
 			kicked = np.zeros(npts, dtype=bool)
-
-		#Note:  The escape velocity here is kind of made up.  Depends on baryonic distribution, dark matter profile...
 
 		#Set to wandering, halt accretion.
 		if np.any(kicked):
@@ -370,7 +369,7 @@ class SAM(object):
 
 	def createWanderers(self, bh_ids, targets):
 		"""
-		Keep the primaries in their progenitors, set secondaries to wandering.  Used when BHs do not merge 
+		Keep the primaries in their progenitors, set secondaries to wandering.  Used when a BH does not merge, or if it is kicked via GW recoil.
 		"""
 
 		self.bhToProg[bh_ids] = targets
@@ -528,7 +527,10 @@ class SAM(object):
 			else:
 				f_EddMax[self.mode[accretors]=='quasar'] = sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), sf.t2z(times[accreting][self.mode[accretors]=='quasar']))
 			if self.steady == None:
-				f_EddMin = np.zeros(sum(accreting))
+				if self.constant_f_min is None:
+					f_EddMin = np.zeros(sum(accreting))
+				elif self.constant_f_min > 0:
+					f_EddMin = np.full(sum(accreting), self.constant_f_min)
 			elif self.steady == 'PowerLaw':
 				f_EddMin = sf.draw_typeII(sum(accreting), redshifts[accreting], logBounds=(-4.0,0.0), slope0=-0.9)
 				#No steady mode for satellites due to RPS
@@ -555,7 +557,8 @@ class SAM(object):
 			#Prograde or retrograde?
 			alignments = np.random.choice([True,False], size=len(accretors), p=[self.diskAlignmentProbability,1.0-self.diskAlignmentProbability])
 
-			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors] = \
+			#The actual integration step.
+			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
 			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], alignments, timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
 			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency)
@@ -564,13 +567,9 @@ class SAM(object):
 			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar
 			self.mode[accretors[finishedQuasars]] = ''
 
-			#Adjust budget
-			bhMassDifference = self.m_bh[accretors] - initialMasses
-			possibleQuasarMassDifference = np.maximum(0, massLimitsQuasar - initialMasses)
-
 			#Keep track of what was gained from the burst mode and the steady mode.
-			self.m_burst[accretors] += np.minimum(bhMassDifference, possibleQuasarMassDifference)
-			self.m_steady[accretors] += np.maximum(bhMassDifference - possibleQuasarMassDifference, 0)
+			self.m_burst[accretors] += growthFromBurst
+			self.m_steady[accretors] += growthFromSteady
 
 		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
 		if np.any(~accreting):
