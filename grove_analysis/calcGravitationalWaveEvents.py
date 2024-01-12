@@ -21,7 +21,7 @@ from scipy.optimize import curve_fit
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 def mergerContributionByHaloModel(haloMass, normalization):
-	return normalization * haloMass * sf.calcNumberDensity(haloMass,0)
+	return normalization * haloMass * sf.calcHaloNumberDensity(haloMass,0)
 
 class GravitationalWaveEventCalculator(object):
 
@@ -66,7 +66,7 @@ class GravitationalWaveEventCalculator(object):
 					self.massRatios = np.concatenate((self.massRatios, tree[:,1]))
 					self.redshifts = np.concatenate((self.redshifts, tree[:,2]))
 					#Don't forget to get rid of little h.
-					self.numberDensities = np.concatenate((self.numberDensities, np.full(tree.shape[0], sf.calcNumberDensity(hostHaloMass, hostRedshift) / self.n_sample / samplingFactor * cosmology.h**3)))
+					self.numberDensities = np.concatenate((self.numberDensities, np.full(tree.shape[0], sf.calcHaloNumberDensity(hostHaloMass, hostRedshift) / self.n_sample / samplingFactor * cosmology.h**3)))
 					self.treeIndices = np.concatenate((self.treeIndices, np.full(tree.shape[0], treeIndex)))
 					self.hostMassesAtZero = np.concatenate((self.hostMassesAtZero, np.full(tree.shape[0], hostHaloMass)))
 

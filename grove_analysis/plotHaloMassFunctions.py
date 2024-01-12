@@ -14,6 +14,7 @@ from matplotlib.collections import PatchCollection
 from .. import sam_functions as sf
 from .. import cosmology
 from .. import constants
+from .. import util
 from scipy.interpolate import RectBivariateSpline
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
@@ -51,7 +52,7 @@ def calcHaloMassFunctions(ensemble, redshiftSlices=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0
 				print("Warning:  Wanted z={0}, but we're using z={1}.".format(redshiftSlices[z_index], closestRedshift))
 
 			#Weight by z=0 abundance
-			weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
+			weight = sf.calcHaloNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 			redshiftMask = (megaDict['redshift'] == closestRedshift)
 
 			halo_weights[z_index] = np.concatenate((halo_weights[z_index], np.full(np.sum(redshiftMask), weight)))
@@ -114,7 +115,7 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[1.0,
 			#If this is the last time around, put up the analytic halo mass functions and do some formatting.
 			if e_index == len(massFuncts)-1:
 
-				axarr[i,j].plot(xaxis, sf.calcNumberDensity(xaxis, redshiftSlices[z_index]), color='r', lw=2, ls='--', label='Analytic')
+				axarr[i,j].plot(xaxis, sf.calcHaloNumberDensity(xaxis, redshiftSlices[z_index]), color='r', lw=2, ls='--', label='Analytic')
 				axarr[i,j].text(xlim[0]*1.4,ylim[1]*1e-1,r'$z = {0}$'.format(redshiftSlices[z_index]), fontsize=12)
 				if (i==0) & (j==axarr.shape[1]-1):
 					axarr[i,j].legend(frameon=False, fontsize=10, loc='upper right')
@@ -149,7 +150,7 @@ def estimateHaloCompleteness(massFuncts, redshiftSlices=[3.0], threshold=0.5, al
 	holeLimits = np.zeros(len(redshiftSlices))
 	for z_index in range(len(redshiftSlices)):
 		centralMasses = 10**(0.5*(logMassBins[:-1]+logMassBins[1:]))
-		correctMassFunction = sf.calcNumberDensity(centralMasses, redshiftSlices[z_index])
+		correctMassFunction = sf.calcHaloNumberDensity(centralMasses, redshiftSlices[z_index])
 		inferredMassFunction = np.average(massFunctionRange[:,z_index,:], axis=1)
 		ratio = inferredMassFunction / correctMassFunction
 		badBins = ratio < threshold
@@ -228,7 +229,7 @@ def estimateBlackHoleCompleteness(blackHoleMassFuncts, redshiftSlices=[3.0], thr
 	holeLimits = np.zeros(len(redshiftSlices))
 	dexPerBin = np.diff(np.log10(centralMasses))[0]
 	nBinsToConvolve = dexScatter / dexPerBin
-	kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+	kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 	for z_index in range(len(redshiftSlices)):
 		correctMassFunction = np.convolve(analyticMassFunction(redshiftSlices[z_index], np.log10(centralMasses))[0,:], kernel, mode='same')
 		inferredMassFunction = np.convolve(massFunctionRange[z_index,:], kernel, mode='same')

@@ -14,6 +14,7 @@ from matplotlib.collections import PatchCollection
 from ..helpers import sam_functions as sf
 from .. import cosmology
 from .. import constants
+from .. import util
 from ..helpers import absorptionFractions as af
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
@@ -42,7 +43,7 @@ def calcMassFunctions(ensemble, redshiftSlices=[0.6, 1.0, 2.0, 3.0, 4.0, 5.0], \
 		nHalos = int(file.split('_')[-1].split('n')[1].split('.')[0])
 	
 		#Weight by z=0 abundance
-		weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
+		weight = sf.calcHaloNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 
 		#Unpack data
 		with gzip.open(ensemble+'/'+file, 'rb') as myfile:
@@ -138,7 +139,7 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[0.6,
 			#Convolve with a lognormal
 			dexPerBin = np.diff(logBHMassBins)[0]
 			convolvedWidth = numberOfDexToConvolve / dexPerBin
-			kernel = sf.makeGaussianSmoothingKernel(convolvedWidth)
+			kernel = util.makeGaussianSmoothingKernel(convolvedWidth)
 			top = np.convolve(massFunctionRange[:,z_index,1], kernel, mode='same')
 			bottom = np.convolve(massFunctionRange[:,z_index,0], kernel, mode='same')
 			axarr[i,j].fill_between(xaxis, bottom, top, label=labels[e_index], \
@@ -179,7 +180,7 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[0.6,
 					amf_mass, amf_density = sf.analyticMassFunction(redshiftSlices[z_index])
 					m_bh_even = np.logspace(5, 10, 100)
 					numberDensity_even = np.interp(np.log10(m_bh_even), np.log10(amf_mass), amf_density)
-					axarr[i,j].plot(m_bh_even, sf.convolve(numberDensity_even, numberOfDexToConvolve, np.diff(np.log10(m_bh_even))[0]), lw=2, color='red', ls='--', label='Analytic')
+					axarr[i,j].plot(m_bh_even, util.convolve(numberDensity_even, numberOfDexToConvolve, np.diff(np.log10(m_bh_even))[0]), lw=2, color='red', ls='--', label='Analytic')
 
 				#Add in the closest redshift bin from KS13
 				if includeQuasars:
@@ -252,7 +253,7 @@ def computeTreeLimits(ensemble, redshiftSlices, alphaBeta=(8.32,5.35), biggestFi
 		redshiftMask = megaDict['redshift'] == closestRedshift
 		biggestHaloAtRedshift = np.max(megaDict['m_halo'][redshiftMask])
 		correspondingBlackHoleMass = 10**(alphaBeta[0] + alphaBeta[1] * np.log10(sf.velocityDispersion(biggestHaloAtRedshift, closestRedshift)/200.0))
-		abundanceOfOne = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
+		abundanceOfOne = sf.calcHaloNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 		limits.append([correspondingBlackHoleMass, abundanceOfOne])
 
 	return limits

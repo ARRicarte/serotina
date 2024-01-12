@@ -9,3 +9,5 @@ from .findFirstDuplicate2_2d import *
 from .findDuplicates import *
 from .primariesAndSecondaries import *
 from .folderToMovie import *
+from .makeGaussianSmoothingKernel import *
+from .convolve import *

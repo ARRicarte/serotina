@@ -34,7 +34,7 @@ def computeBlackHoleDensity(ensemble, n_mass=20, logRange=(11,15), n_sample=15, 
 		hostHaloMass = 10**float(file.split('_')[-1].split('m')[1].split('n')[0])
 		n_tree = int(file.split('_')[-1].split('n')[1].split('.')[0])
 		#NOTE:  n_tree factor removed because averaging is used during bootstrapping instead of summing.
-		weight = sf.calcNumberDensity(hostHaloMass, z_host) / samplingFactor * cosmology.h**3
+		weight = sf.calcHaloNumberDensity(hostHaloMass, z_host) / samplingFactor * cosmology.h**3
 
 		#Unpack data
 		with gzip.open(ensemble+'/'+file, 'r') as myfile:

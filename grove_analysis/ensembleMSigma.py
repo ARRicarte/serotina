@@ -56,7 +56,7 @@ class EnsembleMSigma(object):
 				closestRedshift = uniqueRedshifts[np.argmin(np.abs(uniqueRedshifts - redshiftsDesired[z_index]))]
 				if not oneComplete:
 					usedRedshifts.append(closestRedshift)
-				weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
+				weight = sf.calcHaloNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 				redshiftMask = (megaDict['redshift'] == closestRedshift)
 				
 				combinedMask = nonZeroMask & redshiftMask

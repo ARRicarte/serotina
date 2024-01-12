@@ -25,7 +25,7 @@ def calculateCoevolution(ensemble, logBinEdges, z, n_tree=15, n_bootstrap=1000, 
 		print("   M_h = {0}".format(np.log10(hostHaloMass)))
 
 		#Note:  Not worrying about things like sampling factor & n_halo in the weight; it gets normalized away.
-		weight = sf.calcNumberDensity(hostHaloMass, z_host).tolist()
+		weight = sf.calcHaloNumberDensity(hostHaloMass, z_host).tolist()
 
 		#Extract important data.
 		logMBH = np.log10(data['m_bh'])

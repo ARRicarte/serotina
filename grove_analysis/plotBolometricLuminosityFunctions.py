@@ -14,6 +14,7 @@ from matplotlib.collections import PatchCollection
 from ..helpers import sam_functions as sf
 from .. import cosmology
 from .. import constants
+from .. import util
 from ..helpers.calcLimitingLuminosities import *
 from ..helpers import z6_lf
 from ..cosmology import cosmology_functions as cf
@@ -58,7 +59,7 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 			combinedMask = redshiftMask & luminousMask
 			if np.any(combinedMask):
 				#Weight by z=0 abundance
-				weight = sf.calcNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
+				weight = sf.calcHaloNumberDensity(hostHaloMass, z_host) / nHalos / samplingFactor
 
 				agn_weights[z_index] = np.concatenate((agn_weights[z_index], np.full(np.sum(combinedMask), weight)))
 				agn_luminosities[z_index] = np.concatenate((agn_luminosities[z_index], megaDict['L_bol'][combinedMask]))
@@ -147,7 +148,7 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 				edgecolor='k', alpha=1.0, hatch='//', facecolor='none')
 			if plotConvolved:
 				nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-				kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+				kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 				convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same')
 				convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same')
 				axarr[i,j].fill_between(xaxis, convolvedBottom, convolvedTop, label=labels[e_index], \
@@ -278,7 +279,7 @@ def plotLynxDetections(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1,
 
 			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
 			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+			kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
 			convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
 
@@ -367,7 +368,7 @@ def plotLynxDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 
 			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
 			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+			kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
 			convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
 
@@ -454,7 +455,7 @@ def plotAxisDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 
 			xaxis = 10**(0.5*(logAGNLumBins[:-1]+logAGNLumBins[1:]))
 			nBinsToConvolve = numberOfDexToConvolve / np.diff(logAGNLumBins)[0]
-			kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+			kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 			convolvedBottom = np.convolve(agnLumFunctionRange[:,z_index,0], kernel, mode='same') * cosmology.h**3
 			convolvedTop = np.convolve(agnLumFunctionRange[:,z_index,1], kernel, mode='same') * cosmology.h**3
 
@@ -533,7 +534,7 @@ def saveLuminosityFunctions_text(lumFuncts, outputName, labels, redshiftSlices, 
 	for e_index in range(len(lumFuncts)):
 		log10_L_bol = 0.5*(lumFuncts[e_index][0][:-1] + lumFuncts[e_index][0][1:])
 		nBinsToConvolve = numberOfDexToConvolve / np.diff(log10_L_bol)[0]
-		kernel = sf.makeGaussianSmoothingKernel(nBinsToConvolve)
+		kernel = util.makeGaussianSmoothingKernel(nBinsToConvolve)
 		for z_index in range(len(redshiftSlices)):
 			convolvedBottom = np.convolve(lumFuncts[e_index][1][:,z_index,0], kernel, mode='same') * cosmology.h**3
 			convolvedTop = np.convolve(lumFuncts[e_index][1][:,z_index,1], kernel, mode='same') * cosmology.h**3
