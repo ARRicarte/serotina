@@ -83,7 +83,7 @@ class SAM(object):
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignment': 'random'}
+		'diskAlignmentProbability': 0.5}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -552,10 +552,8 @@ class SAM(object):
 				#No steady mode for satellites due to RPS
 				f_EddMin[self.satelliteToCentral[self.bhToProg[accretors]]!=-1] = 0
 
-			if self.diskAlignment == 'random':
-				alignments = np.random.choice([True,False], size=len(accretors))
-			elif self.diskAlignment == 'aligned':
-				alignments = np.ones(len(accretors), dtype=bool)
+			#Prograde or retrograde?
+			alignments = np.random.choice([True,False], size=len(accretors), p=[self.diskAlignmentProbability,1.0-self.diskAlignmentProbability])
 
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors] = \
 			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], alignments, timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
@@ -649,6 +647,7 @@ class SAM(object):
 		largestIndex = np.argmax(self.m_bh[~self.merged_bh])
 		print("The most massive BH lives in progenitor {0}, at node {1}.".format(self.bhToProg[unmergedIndices[largestIndex]], self.progToNode[self.bhToProg[unmergedIndices[largestIndex]]]))
 		print("Log Mass of Largest BH:", np.log10(self.m_bh[unmergedIndices[largestIndex]]))
+		print("Spin of Largest BH:", self.spin_bh[unmergedIndices[largestIndex]])
 		print("Fraction of Mass Gained in BH Mergers:", self.m_merged[unmergedIndices[largestIndex]] / self.m_bh[unmergedIndices[largestIndex]])
 		print("Fraction of Mass Gained in Burst Mode:", self.m_burst[unmergedIndices[largestIndex]] / self.m_bh[unmergedIndices[largestIndex]])
 		print("Fraction of Mass Gained in Steady Mode:", self.m_steady[unmergedIndices[largestIndex]] / self.m_bh[unmergedIndices[largestIndex]])

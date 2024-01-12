@@ -66,8 +66,11 @@ def calcRemnantSpin(m1, m2, a1, a2, theta1=None, theta2=None, phi1=None, phi2=No
 	a_vector_2 = np.vstack([a2 * np.sin(theta2) * np.cos(phi2), a2 * np.sin(theta2) * np.sin(phi2), a2 * np.cos(theta2)])
 
 	#alpha = angle between a1 and a2, beta = angle between a1 and l, gamma = angle between a2 and l
-
-	cosAlpha = (a_vector_1[0,:]*a_vector_2[0,:] + a_vector_1[1,:]*a_vector_2[1,:] + a_vector_1[2,:]*a_vector_2[2,:]) / a1 / a2
+	cosAlpha = np.ones_like(a1)
+	twoNonzeroSpins = (a1 != 0) & (a2 != 0)
+	if np.any(twoNonzeroSpins):
+		#This is just an explicit dot product.
+		cosAlpha[twoNonzeroSpins] = (a_vector_1[0,twoNonzeroSpins]*a_vector_2[0,twoNonzeroSpins] + a_vector_1[1,twoNonzeroSpins]*a_vector_2[1,twoNonzeroSpins] + a_vector_1[2,twoNonzeroSpins]*a_vector_2[2,twoNonzeroSpins]) / a1[twoNonzeroSpins] / a2[twoNonzeroSpins]
 	cosBeta = np.cos(theta1)
 	cosGamma = np.cos(theta2)
 
