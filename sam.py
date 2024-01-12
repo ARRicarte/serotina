@@ -79,10 +79,11 @@ class SAM(object):
 		parameterDefaults = {'seedingMode': 'dcbh', 'seedingEfficiency': 1.0, 'useDelayTimes': False, \
 		'majorMergerMassRatio': 0.1, 'constant_f_min': None, 'constant_f_max': None, 'z_superEdd': 30, 'howToSave': 'progenitors', \
 		'spinEvolution': False, 'MsigmaNormalization': 8.45, 'MsigmaSlope': 5.0, 'spinMax': 0.998, 'mergerKicks': False, 'fEdd_MyrPerDex': 10.0, \
-		'useMsigmaCap': True, 'fixedSeedMass': None, 'silent': False, 'randomFractionOn': 0.0, 'alignQuasarSpins': True, 'seedingSigma': 3.5, \
+		'useMsigmaCap': True, 'fixedSeedMass': None, 'silent': False, 'randomFractionOn': 0.0, 'alignQuasarSpins': False, 'seedingSigma': 3.5, \
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
-		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability'}
+		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
+		'diskAlignment': 'random'}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -498,28 +499,6 @@ class SAM(object):
 			self.eddRatio[nonAccretors] = 0
 		self.lastIntegrationTime[bhs] = times
 
-	def integrateAll_nobudget_cap(self, bh, timeStep, time):
-		"""
-		DEPRECATED:  Update to do multiple bhs at once.
-
-		~self.useColdReservoir & self.useMsigmaCap
-		"""
-
-		if (self.f_min > 0) | (self.mode[bh] != '') | (self.t_decline[bh] > 0):
-			oldMass = self.m_bh[bh]
-			massLimit = self.M_bhSigma(self.bhToNode[bh])
-			self.m_bh[bh], self.spin_bh[bh], self.L_bol[bh], self.t_decline[bh], self.t_fEdd[bh] = \
-			acc.accretionComposite(self.m_bh[bh], self.spin_bh[bh], timeStep, time, f_EddCrit=self.f_EddCrit, \
-			spinTracking=self.spinEvolution, t_fEdd=self.t_fEdd[bh], t_decline=self.t_decline[bh], maxQuasarMass=massLimit, \
-			f_EddMax=self.f_max, f_EddMin=self.f_min, triggerDecline=self.includeDecline, spinMax=self.spinMax, spinlessDefault=self.defaultRadiativeEfficiency)
-			self.eddRatio[bh] = np.log(self.m_bh[bh]/oldMass) / timeStep * (constants.t_Sal / constants.yr / 1e9) / (1.0-self.defaultRadiativeEfficiency) * self.defaultRadiativeEfficiency
-			if self.m_bh[bh] == massLimit:
-				self.mode[bh] == ''
-		else:
-			self.L_bol[bh] = 0
-			self.eddRatio[bh] = 0
-		self.lastIntegrationTime[bh] = time
-
 	def integrateAll_nobudget_cap_nodecline(self, bhs, timeSteps, times):
 		"""
 		~self.useColdReservoir & self.useMsigmaCap & ~self.includeDecline
@@ -548,11 +527,6 @@ class SAM(object):
 				f_EddMax[self.mode[accretors]=='quasar'] = self.constant_f_max
 			else:
 				f_EddMax[self.mode[accretors]=='quasar'] = sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), sf.t2z(times[accreting][self.mode[accretors]=='quasar']))
-				#f_EddMax[self.mode[accretors]=='quasar'] = np.minimum(1.0, sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), sf.t2z(times[accreting][self.mode[accretors]=='quasar'])))
-				"""
-				f_EddMax[self.mode[accretors]=='quasar'] = sf.randomWalk_typeI(self.eddRatio[accretors], timeSteps[accreting], \
-				self.fEdd_MyrPerDex, sf.t2z(times[accreting]))
-				"""
 			if self.steady == None:
 				f_EddMin = np.zeros(sum(accreting))
 			elif self.steady == 'PowerLaw':
@@ -577,20 +551,14 @@ class SAM(object):
 				self.defaultRadiativeEfficiency / (1.0-self.defaultRadiativeEfficiency) / timeSteps))
 				#No steady mode for satellites due to RPS
 				f_EddMin[self.satelliteToCentral[self.bhToProg[accretors]]!=-1] = 0
-			"""
-			if self.constant_f_min is not None:
-				f_EddMin[:] = self.constant_f_min
-			else:
-				needsNewRatio = (self.eddRatio[accretors] == 0) & (initialMasses < massLimitsSteady)
-				f_EddMin[needsNewRatio] = sf.draw_typeII(sum(needsNewRatio), redshifts[accreting][needsNewRatio])
-				f_EddMin[~needsNewRatio] = sf.randomWalk_typeII(self.eddRatio[accretors[~needsNewRatio]], timeSteps[accreting][~needsNewRatio], \
-				self.fEdd_MyrPerDex, redshifts[accreting][~needsNewRatio])
-			"""
 
-			#NOTE TO SELF:  Always aligned for now.
+			if self.diskAlignment == 'random':
+				alignments = np.random.choice([True,False], size=len(accretors))
+			elif self.diskAlignment == 'aligned':
+				alignments = np.ones(len(accretors), dtype=bool)
 
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors] = \
-			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], np.full(len(accretors), 1), timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
+			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], alignments, timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
 			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency)
 
@@ -605,180 +573,6 @@ class SAM(object):
 			#Keep track of what was gained from the burst mode and the steady mode.
 			self.m_burst[accretors] += np.minimum(bhMassDifference, possibleQuasarMassDifference)
 			self.m_steady[accretors] += np.maximum(bhMassDifference - possibleQuasarMassDifference, 0)
-
-		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
-		if np.any(~accreting):
-			self.L_bol[nonAccretors] = 0
-			self.eddRatio[nonAccretors] = 0
-		self.lastIntegrationTime[bhs] = times
-
-	def integrateAll_budget_nocap_nodecline(self, bhs, timeSteps, times):
-		"""
-		self.useColdReservoir & self.useMsigmaCap & ~self.includeDecline
-		"""
-
-		#Determine which black holes are accreting
-		accreting = (self.accretionBudget[bhs] > 0) | np.full(len(bhs), self.constant_f_min>0, dtype=bool) | np.full(len(bhs), self.constant_f_min is None, dtype=bool)
-		accretors = bhs[accreting]
-		nonAccretors = bhs[~accreting]
-		redshifts = sf.t2z(times)
-		if np.any(accreting):
-			initialMasses = self.m_bh[accretors]
-
-			#Mass limits are determined by the accretionBudget.
-			massLimitsBurst = initialMasses + self.accretionBudget[accretors]
-			massLimitsSteady = np.full(len(accretors), np.inf)
-
-			#Integrate with Cython package
-			f_EddMax = np.ones(sum(accreting))
-			typeI = self.accretionBudget[accretors] > 0
-			typeII = ~typeI
-			if np.any(typeI):
-				if self.constant_f_max is not None:
-					f_EddMax[typeI] = np.full(sum(typeI), self.constant_f_max)
-				else:
-					f_EddMax[typeI] = sf.randomWalk_typeI(self.eddRatio[accretors[typeI]], timeSteps[accreting][typeI], \
-					self.fEdd_MyrPerDex, sf.t2z(times[accreting][typeI]))
-			if self.steady == None:
-				f_EddMin = np.zeros(sum(accreting))
-			elif self.steady == 'PowerLaw':
-				f_EddMin = sf.draw_typeII(sum(accreting), redshifts[accreting], logBounds=(-4.0,0.0), slope0=-0.9)
-				#No steady mode for satellites due to RPS
-				f_EddMin[self.satelliteToCentral[self.bhToProg[bhs[accreting]]]!=-1] = 0
-			elif self.steady == 'AGNMS':
-				#Estimate the SFR
-				haloIDs = self.progToNode[self.bhToProg[accretors]]
-
-				#Subtract away the merged component of the SFR
-				DeltaM_star = np.array([self.m_star[haloIDs[i]] - \
-				np.sum(self.m_star[self.progenitor[haloIDs[i]]:self.progenitor[haloIDs[i]]+self.nchild[haloIDs[i]]]) for i in range(len(accretors))])
-				Deltat_star = self.time[haloIDs] - self.time[self.progenitor[haloIDs]]
-				sfr = np.zeros(len(accretors))
-				hasProgenitor = self.progenitor[haloIDs]!=-1
-				sfr[hasProgenitor] = np.maximum(0, DeltaM_star[hasProgenitor]/Deltat_star[hasProgenitor])
-				#If there is no progenitor, the sfr is left at 0.
-
-				Delta_m_min = 1e-3 * sfr * timeSteps
-				f_EddMin = np.minimum(self.constant_f_max,np.maximum(0,np.log(Delta_m_min/self.m_bh[bhs]+1) * (constants.t_Sal/constants.yr/1e9) * \
-				self.defaultRadiativeEfficiency / (1.0-self.defaultRadiativeEfficiency) / timeSteps))
-				#No steady mode for satellites due to RPS
-				f_EddMin[self.satelliteToCentral[self.bhToProg[bhs[accreting]]]!=-1] = 0
-			'''
-			if self.constant_f_min is not None:
-				f_EddMin[:] = np.full(sum(accreting), self.constant_f_min)
-			else:
-				needsNewRatio = (self.eddRatio[accretors] == 0) & (initialMasses < massLimitsSteady)
-				f_EddMin[needsNewRatio] = sf.draw_typeII(sum(needsNewRatio), redshifts[accreting][needsNewRatio])
-				f_EddMin[~needsNewRatio] = sf.randomWalk_typeII(self.eddRatio[accretors[~needsNewRatio]], timeSteps[accreting][~needsNewRatio], \
-				self.fEdd_MyrPerDex, redshifts[accreting][~needsNewRatio])
-			'''
-			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors] = \
-			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
-			f_EddCrit=self.f_EddCrit, spinTracking=self.spinEvolution, maxBurstMass=massLimitsBurst, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			spinlessDefault=self.defaultRadiativeEfficiency)
-
-			#Adjust budget
-			bhMassDifference = self.m_bh[accretors] - initialMasses
-
-			#Keep track of what was gained from the burst mode and the steady mode.
-			self.m_burst[accretors] += np.minimum(bhMassDifference, self.accretionBudget[accretors])
-			self.m_steady[accretors] += np.maximum(bhMassDifference - self.accretionBudget[accretors], 0)
-
-			self.accretionBudget[accretors] = np.maximum(self.accretionBudget[accretors] - bhMassDifference, 0)
-
-		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
-		if np.any(~accreting):
-			self.L_bol[nonAccretors] = 0
-			self.eddRatio[nonAccretors] = 0
-		self.lastIntegrationTime[bhs] = times
-
-	def integrateAll_budget_cap_nodecline(self, bhs, timeSteps, times):
-		"""
-		self.useColdReservoir & self.useMsigmaCap & ~self.includeDecline
-		"""
-
-		#Determine which black holes are accreting
-		accreting = (self.eddRatio[bhs] > 0)
-		if (self.constant_f_min is None) | (self.constant_f_min > 0):
-			accreting[:] = True
-		accretors = bhs[accreting]
-		nonAccretors = bhs[~accreting]
-		redshifts = sf.t2z(times)
-		if np.any(accreting):
-			initialMasses = self.m_bh[accretors]
-
-			#Mass limits are determined by the accretionBudget.
-			massLimitsBurst = initialMasses + self.accretionBudget[accretors]
-			massLimitsSteady = self.M_bhSigma(self.bhToProg[accretors])
-
-			#TODO:  Clean this up.  Setting things above M-s to 1e-5
-			aboveMS = initialMasses >= massLimitsSteady
-			massLimitsSteady[aboveMS] = np.inf
-
-			#Integrate with Cython package
-			f_EddMax = np.ones(sum(accreting))
-			typeI = self.accretionBudget[accretors] > 0
-			typeII = ~typeI
-			if np.any(typeI):
-				if self.constant_f_max is not None:
-					f_EddMax[typeI] = np.full(sum(typeI), self.constant_f_max)
-				else:
-					f_EddMax[typeI] = sf.randomWalk_typeI(self.eddRatio[accretors[typeI]], timeSteps[accreting][typeI], \
-					self.fEdd_MyrPerDex, sf.t2z(times[accreting][typeI]))
-			f_EddMin = np.zeros(sum(accreting))
-			if self.constant_f_min is not None:
-				f_EddMin[:] = np.full(sum(accreting), self.constant_f_min)
-			else:
-				needsNewRatio = (self.eddRatio[accretors] == 0)
-				f_EddMin[needsNewRatio] = sf.draw_typeII(sum(needsNewRatio), redshifts[accreting][needsNewRatio])
-				f_EddMin[~needsNewRatio] = sf.randomWalk_typeII(self.eddRatio[accretors[~needsNewRatio]], timeSteps[accreting][~needsNewRatio], \
-				self.fEdd_MyrPerDex, redshifts[accreting][~needsNewRatio])
-			f_EddMin[aboveMS] = 1e-5
-			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors] = \
-			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
-			f_EddCrit=self.f_EddCrit, spinTracking=self.spinEvolution, maxBurstMass=massLimitsBurst, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			spinlessDefault=self.defaultRadiativeEfficiency)
-
-			#Adjust budget
-			bhMassDifference = self.m_bh[accretors] - initialMasses
-			self.accretionBudget[accretors] = np.maximum(self.accretionBudget[accretors] - bhMassDifference, 0)
-
-		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
-		if np.any(~accreting):
-			self.L_bol[nonAccretors] = 0
-			self.eddRatio[nonAccretors] = 0
-		self.lastIntegrationTime[bhs] = times
-
-	def integrateAll_budget_cap_decline(self, bhs, timeSteps, times):
-		"""
-		self.useColdReservoir & self.useMsigmaCap
-		"""
-
-		#Determine which black holes are accreting
-		accreting = (self.f_min > 0) | (self.accretionBudget[bhs] > 0) | (self.t_decline[bhs] > 0)
-		accretors = bhs[accreting]
-		nonAccretors = bhs[~accreting]
-		if np.any(accreting):
-			initialMasses = self.m_bh[accretors]
-
-			#Mass limits are determined by the accretionBudget
-			massLimits = np.minimum(initialMasses + self.accretionBudget[accretors], np.maximum(self.M_bhSigma(self.bhToProg[accretors]), self.m_bh[accretors]))
-
-			#Integrate with Cython package
-			if self.constant_f_max is not None:
-				f_EddMax = np.full(sum(accreting), self.constant_f_max)
-			else:
-				f_EddMax = sf.drawEddingtonRatios(sum(accreting))
-			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.t_decline[accretors], self.t_fEdd[accretors] = \
-			acc.accretionComposite(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddCrit=self.f_EddCrit, \
-			spinTracking=self.spinEvolution, t_fEdd=self.t_fEdd[accretors], t_decline=self.t_decline[accretors], maxQuasarMass=massLimits, \
-			f_EddMax=f_EddMax, f_EddMin=self.f_min, triggerDecline=self.includeDecline, spinMax=self.spinMax, spinlessDefault=self.defaultRadiativeEfficiency)
-
-			#Define Eddington ratio based on Mdot as if efficiency is fixed at 0.1
-			self.eddRatio[accretors] = np.log(self.m_bh[accretors]/initialMasses) / timeSteps[accreting] * \
-			(constants.t_Sal / constants.yr / 1e9) / (1.0-self.defaultRadiativeEfficiency) * self.defaultRadiativeEfficiency
-			self.accretionBudget[accretors] = np.max(np.vstack((self.accretionBudget[accretors] - (self.m_bh[accretors] - initialMasses), \
-			np.full(accretors.shape[0],0,dtype=np.float))), axis=0)
 
 		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
 		if np.any(~accreting):
