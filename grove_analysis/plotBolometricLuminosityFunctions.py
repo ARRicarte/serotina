@@ -45,7 +45,7 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 		nHalos = int(file.split('_')[-1].split('n')[1].split('.')[0])
 	
 		#Unpack data
-		with gzip.open(ensemble+'/'+file, 'r') as myfile:
+		with gzip.open(ensemble+'/'+file, 'rb') as myfile:
 			megaDict = pickle.load(myfile)
 		uniqueRedshifts = np.unique(megaDict['redshift'])
 
@@ -120,15 +120,15 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 	z_hop = hopkinsDataPoints[:,0]
 	unique_z_hop = np.unique(z_hop)
 
-	with open(currentPath + '../lookup_tables/bh_data/ueda14/ueda14.pkl', 'r') as myfile:
-		uedaRanges = pickle.load(myfile)
+	with open(currentPath + '../lookup_tables/bh_data/ueda14/ueda14.pkl', 'rb') as myfile:
+		uedaRanges = pickle.load(myfile, encoding='latin1')
 	z_ueda = uedaRanges['redshift']
 	lum_ueda = uedaRanges['luminosity']
 	numberDensity_ueda = uedaRanges['luminosityFunction']
 
 	if showCompleteness:
-		with open(completenessFile, 'r') as myfile:
-			completenessTable = pickle.load(myfile)
+		with open(completenessFile, 'rb') as myfile:
+			completenessTable = pickle.load(myfile, encoding='latin1')
 
 	if showLynx:
 		lynxLimit = calcLynxLimit(redshiftSlices)
@@ -202,8 +202,8 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 	#Loop again for final formatting
 	for i in range(axarr.shape[0]):
 		for j in range(axarr.shape[1]):
-			axarr[i,j].set_xscale('log', nonposx='clip', nonposy='clip')
-			axarr[i,j].set_yscale('log', nonposx='clip', nonposy='clip')
+			axarr[i,j].set_xscale('log')
+			axarr[i,j].set_yscale('log')
 			if j==0:
 				axarr[i,j].set_ylabel(r'$dn/d\log L_\bullet \ [h^{3} \, \mathrm{Mpc}^{-3}]$', fontsize=12)
 			axarr[i,j].set_xlim(xlim[0],xlim[1])
@@ -317,8 +317,8 @@ def plotLynxDetections(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1,
 	#Loop again for final formatting
 	for i in range(axarr.shape[0]):
 		for j in range(axarr.shape[1]):
-			axarr[i,j].set_xscale('log', nonposx='clip', nonposy='clip')
-			axarr[i,j].set_yscale('log', nonposx='clip', nonposy='clip')
+			axarr[i,j].set_xscale('log')
+			axarr[i,j].set_yscale('log')
 			if i==figShape[0]-1:
 				axarr[i,j].set_xlabel(r'$L_\bullet \ [L_\odot]$', fontsize=12)
 			if j==0:
@@ -421,7 +421,7 @@ def plotLynxDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 
 	ax.legend(frameon=False)
 	ax.set_xscale('linear')
-	ax.set_yscale('log', nonposx='clip', nonposy='clip')
+	ax.set_yscale('log')
 	ax.set_xlabel(r'$z$', fontsize=12)
 	ax.set_ylabel(r'Number of AGN in Lynx Deep Field', fontsize=12)
 	ax.set_xlim(redshiftSlices[0]-0.5,redshiftSlices[-1]+0.5)
@@ -502,7 +502,7 @@ def plotAxisDetectionsDiscrete(lumFuncts, labels=None, colors=None, redshiftSlic
 
 	ax.legend(frameon=False)
 	ax.set_xscale('linear')
-	ax.set_yscale('log', nonposx='clip', nonposy='clip')
+	ax.set_yscale('log')
 	ax.set_xlabel(r'$z$', fontsize=12)
 	ax.set_ylabel(r'Number of AGN Detected', fontsize=12)
 	ax.set_xlim(redshiftSlices[0]-0.5,redshiftSlices[-1]+0.5)

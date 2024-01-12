@@ -164,9 +164,9 @@ def plotOccupationFractions(occupationFractionList, colors=['g'], labels=['Light
 			data_top = np.loadtxt(myfile)
 		poly_x = np.concatenate((data_top[:,0], np.flipud(data_bottom[:,0])))
 		poly_y = np.concatenate((data_top[:,1], np.flipud(data_bottom[:,1])))	
-		polygon = [Polygon(zip(poly_x,poly_y))]
+		polygon = [Polygon(np.transpose(np.vstack([poly_x,poly_y])))]
 		ax.add_collection(PatchCollection(polygon, alpha=0.6, color='k'))
-		ax.fill_between([], [], [], alpha=0.6, color='k', label='Miller+15')# \n(z=0)')
+		ax.fill_between([], [], [], alpha=0.6, color='k', label='Miller+15')
 
 	for e_index in range(len(occupationFractionList)):
 		xaxis = occupationFractionList[e_index][0]
@@ -228,7 +228,7 @@ def plotEffectiveOccupationFraction(occupationFractionList, colors=['g'], curveL
 				data_top = np.loadtxt(myfile)
 			poly_x = np.concatenate((data_top[:,0], np.flipud(data_bottom[:,0])))
 			poly_y = np.concatenate((np.log10(data_top[:,1]), np.log10(np.flipud(data_bottom[:,1]))))
-			polygon = [Polygon(zip(poly_x,poly_y))]
+			polygon = [Polygon(np.transpose(np.vstack([poly_x,poly_y])))]
 			ax.add_collection(PatchCollection(polygon, alpha=0.6, color='k'))
 			ax.fill_between([], [], [], alpha=0.6, color='k', label='Miller+15')
 

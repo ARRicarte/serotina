@@ -29,6 +29,8 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 	relativeMsigma=False, accretedMassDensity=False, halo_mass_funct=False, blackHoleMergers=False, occupationIndex=3):
 
 	#Make a folder
+	if outFolder[-1] != '/':
+		outFolder += '/'
 	if os.path.exists(outFolder):
 		print("Using existing folder " + outFolder + "for plotting output.")
 	else:

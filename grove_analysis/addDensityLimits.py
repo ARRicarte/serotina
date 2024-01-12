@@ -22,7 +22,7 @@ def addDensityLimits(ax, labelOldConstraints=False):
 	#Plot Hopkins 2007
 	with open(path+"hopkins2007.dat", 'r') as myfile:
 		data = np.loadtxt(myfile)
-		yerr = [data[:,1]-data[:,2], data[:,3]-data[:,1]]
+		yerr = [data[:,2]-data[:,1], data[:,1]-data[:,3]]
 		er_hopkins = ax.errorbar(data[:,0], data[:,1], yerr=yerr, ls='None', lw=2, \
 		fmt='o', color='k', markeredgecolor='k', label=oldLabels[0])
 

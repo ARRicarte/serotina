@@ -156,7 +156,7 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[0.6,
 							data_bottom = np.loadtxt(myfile)
 						poly_x = np.concatenate((10**data_top[:,0],np.flipud(10**data_bottom[:,0])))
 						poly_y = np.concatenate((data_top[:,1]/cosmology.h**3,np.flipud(data_bottom[:,1]/cosmology.h**3)))
-						polygon = [Polygon(zip(poly_x,poly_y))]
+						polygon = [Polygon(np.transpose(np.vstack([poly_x,poly_y])))]
 						axarr[i,j].add_collection(PatchCollection(polygon, alpha=0.7, color='k', hatch='/'))
 						
 						#For some reason, labeling doesn't work in ax.add_collection().  This is my work-around.  Also good in case no data in this panel.
@@ -171,7 +171,7 @@ def plotMassFunctions(massFuncts, labels=None, colors=None, redshiftSlices=[0.6,
 						data_bottom = np.loadtxt(myfile)
 					poly_x = np.concatenate((10**data_top[:,0],np.flipud(10**data_bottom[:,0])))
 					poly_y = np.concatenate((data_top[:,1]/cosmology.h**3,np.flipud(data_bottom[:,1]/cosmology.h**3)))
-					polygon = [Polygon(zip(poly_x,poly_y))]
+					polygon = [Polygon(np.transpose(np.vstack([poly_x,poly_y])))]
 					axarr[i,j].add_collection(PatchCollection(polygon, alpha=0.7, color='k', hatch='/'))
 					axarr[i,j].fill_between([], [], [], alpha=0.7, color='k', label='Shankar+09', hatch='/')
 
