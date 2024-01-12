@@ -128,33 +128,6 @@ _logInterpVelocityDispersion = RectBivariateSpline(vd_logHaloMass, vd_redshift, 
 def velocityDispersion(m_halo, z):
 	return _logInterpVelocityDispersion(np.log10(m_halo), z, grid=False)
 
-"""
-Time and redshift conversions.
-"""
-
-with open(currentPath + "../lookup_tables/tofz.pkl", 'rb') as myfile:
-	data = pickle.load(myfile, encoding='latin1')
-tarray = data['tarray']
-zarray = data['zarray']
-
-z2t_interp = interp1d(zarray, tarray)
-t2z_interp = interp1d(tarray/1e9, zarray)
-
-def z2t(z):
-	"""
-	Compute time as a function of redshift.  Results have been tabulated for the Planck2015 cosmology.
-
-	Returns time in Gyr.
-	"""
-	return z2t_interp(z)/1e9
-
-def t2z(t):
-	"""
-	Compute redshift as a function of time.
-	"""
-	return t2z_interp(t)
-
-
 def v2t(m_halo, v):
 	"""
 	Compute dynamical time as a function of halo circular velocity.  In the SIS model, we're assuming that
@@ -204,13 +177,6 @@ def calcLumDist(z):
 	d_H = constants.c * cosmology.t_H * constants.yr
 	d_c = d_H * quad(lambda zprime: (cosmology.Omega_m*(1+zprime)**3 + cosmology.Omega_l)**-0.5, 0, z)[0]
 	return d_c * (1 + z)
-
-def H(z):
-	"""
-	Compute the Hubble constant as a function of redshift.
-	(Ignoring Omega_k and Omega_r.)
-	"""
-	return cosmology.H_0 * np.sqrt(cosmology.Omega_m*(1+z)**3 + cosmology.Omega_l)
 
 def eddingtonLimit(m_bh, efficiency=0.1):
 	"""

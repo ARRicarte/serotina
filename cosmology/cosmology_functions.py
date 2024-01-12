@@ -7,8 +7,6 @@ from ..constants import constants
 import os
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
-#TODO:  Some functions are repeated in sam_functions for some reason.  Reduce redundancy.
-
 """
 Time and redshift conversions.
 """

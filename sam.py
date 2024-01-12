@@ -5,6 +5,7 @@ This program reads in merger tree output and paints black holes onto them.
 
 import numpy as np
 from . import cosmology
+from . import cosmology_functions
 from . import constants
 from .helpers import sam_functions as sf
 from .helpers import bh_imfs, smhm, fabioMergerProbabilities
@@ -47,7 +48,7 @@ class SAM(object):
 		if not silent:
 			print("Calculating times and stellar masses.")
 		self.uniqueRedshift = np.flipud(np.unique(self.redshift))
-		self.uniqueTime = sf.z2t(self.uniqueRedshift)		#Gyr
+		self.uniqueTime = cosmology_functions.z2t(self.uniqueRedshift)		#Gyr
 		self.time = np.zeros(self.n_node)
 		for lev in range(len(self.uniqueRedshift)):
 			timeAtLev = self.uniqueTime[len(self.uniqueTime)-1-lev]
@@ -330,7 +331,7 @@ class SAM(object):
 			theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
 
 		#Save to a list of all merger events.
-		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], sf.t2z(times)]).transpose()))
+		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times)]).transpose()))
 
 		#Simply adding the two masses together.
 		self.m_bh[primaries] += self.m_bh[secondaries]
@@ -344,7 +345,7 @@ class SAM(object):
 			
 			#Compare kick velocity to Choksi formula
 			#Note:  Using the escape velocity here is pretty unfair.  In reality, it depends on baryonic distribution, dark matter profile, etc., all of which are time and orbit dependent.
-			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], sf.t2z(times)))
+			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], cosmology_functions.t2z(times)))
 		else:
 			kicked = np.zeros(npts, dtype=bool)
 
@@ -512,7 +513,7 @@ class SAM(object):
 			accreting = self.mode[bhs] == 'quasar'
 		accretors = bhs[accreting]
 		nonAccretors = bhs[~accreting]
-		redshifts = sf.t2z(times)
+		redshifts = cosmology_functions.t2z(times)
 		if np.any(accreting):
 			initialMasses = self.m_bh[accretors]
 
@@ -525,7 +526,7 @@ class SAM(object):
 			if self.constant_f_max is not None:
 				f_EddMax[self.mode[accretors]=='quasar'] = self.constant_f_max
 			else:
-				f_EddMax[self.mode[accretors]=='quasar'] = sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), sf.t2z(times[accreting][self.mode[accretors]=='quasar']))
+				f_EddMax[self.mode[accretors]=='quasar'] = sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), cosmology_functions.t2z(times[accreting][self.mode[accretors]=='quasar']))
 			if self.steady == None:
 				if self.constant_f_min is None:
 					f_EddMin = np.zeros(sum(accreting))
@@ -822,7 +823,7 @@ class SAM(object):
 			time = self.uniqueTime[self.step]
 			previousTime = self.uniqueTime[max(self.step-1,0)]
 			if not self.silent:
-				print("t_ABB = {0:3.2f} Gyr, z={1:4.2f}.".format(time, sf.t2z([time])[0]))
+				print("t_ABB = {0:3.2f} Gyr, z={1:4.2f}.".format(time, cosmology_functions.t2z([time])[0]))
 
 			#Ignore any progenitors that are stripped, merged, or not formed yet.
 			isRelevant = (~self.stripped) & (~self.merged) & (self.time[self.progToNode] <= time)
@@ -1032,7 +1033,7 @@ class SAM(object):
 							bh_indices = bh_indices[homeMatcher[0]]
 							if self.useDelayTimes:
 								#Compute the probability that the BHs will eventually merge, then queue it up.
-								smhm_redshift = sf.t2z(bh_merge_times)
+								smhm_redshift = cosmology_functions.t2z(bh_merge_times)
 								stellarMassMerging = self.m_star[self.progToNode[self.bhToProg[bh_indices]]]
 								stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
 								mergerProbabilities = sf.mergerProbability(stellarMassTarget, stellarMassMerging/stellarMassTarget)

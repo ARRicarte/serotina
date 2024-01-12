@@ -6,6 +6,7 @@ Plots the mass assembly history of black holes of different masses in the SAM
 
 import numpy as np
 from .. import sam_functions as sf
+from .. import cosmology_functions as cf
 import os
 import matplotlib.pyplot as plt
 import pickle
@@ -95,9 +96,9 @@ def plotAssemblyHistories(redshifts, assemblyHistories, labels=['Light'], colors
 		ylim = (1e2,3e10)
 
 	if convertToTime:
-		xvalues = sf.z2t(redshifts)
+		xvalues = cf.z2t(redshifts)
 		xlabel = '$t_\mathrm{ABB} \ [\mathrm{Gyr}]$'
-		xlim = (sf.z2t(xlim[0]), sf.z2t(xlim[1]))
+		xlim = (cf.z2t(xlim[0]), cf.z2t(xlim[1]))
 	else:
 		xvalues = redshifts
 		xlabel = 'z'
@@ -131,7 +132,7 @@ def plotAssemblyHistories(redshifts, assemblyHistories, labels=['Light'], colors
 		if convertToTime:
 			stringRedshifts = [0,0.5,1,2,3,4,6]
 			redshifts = np.array(stringRedshifts)
-			labeledTimes = sf.z2t(redshifts)
+			labeledTimes = cf.z2t(redshifts)
 			axtwins.append(axarr[panel].twiny())
 			axtwins[panel].set_xlim(axarr[panel].get_xlim())
 			axtwins[panel].set_xticks(labeledTimes)
