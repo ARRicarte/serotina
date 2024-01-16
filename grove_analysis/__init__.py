@@ -10,3 +10,4 @@ from .plotHaloMassFunctions import *
 from .plotMassFunctions import *
 from .plotMergedMassFraction import *
 from .plotOccupationFractions import *
+from .plotSpinDistributions import *

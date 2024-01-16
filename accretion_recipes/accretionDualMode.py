@@ -72,10 +72,15 @@ def accretionDualMode(mass, spinMagnitude, alignment, timeStep, time, f_EddBurst
 		#Infer time from the mass limit
 		timeAsSteady[hasSteadyTime] = np.minimum(np.log(maxSteadyMass[hasSteadyTime]/mass[hasSteadyTime]) / f_EddSteady[hasSteadyTime] * t_Edd / (1.0-steadyRadiativeEfficiencies) * steadyRadiativeEfficiencies, timeStep[hasSteadyTime]-timeAsQuasar[hasSteadyTime])
 
-		newMass[hasSteadyTime], newSpinMagnitude[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(mass[hasSteadyTime], spinMagnitude[hasSteadyTime], f_EddSteady[hasSteadyTime], timeStep[hasSteadyTime], alignment[hasSteadyTime], \
+		newMass[hasSteadyTime], newSpinMagnitude[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpinMagnitude[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], alignment[hasSteadyTime], \
 		includeSpinDependence=includeSpinDependence, includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax, fiducialRadiativeEfficiency=fiducialRadiativeEfficiency)
 		finalfEdd[hasSteadyTime] = f_EddSteady[hasSteadyTime]
 
 		growthFromSteady[hasSteadyTime] += newMass[hasSteadyTime]
+
+	if np.any(growthFromBurst < 0):
+		import pdb; pdb.set_trace()
+	if np.any(growthFromSteady < 0):
+		import pdb; pdb.set_trace()
 
 	return newMass, newSpinMagnitude, finalLuminosity, finalfEdd, growthFromBurst, growthFromSteady
