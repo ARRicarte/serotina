@@ -15,7 +15,8 @@ def calcSpinEvolutionFromAccretion(spinMagnitude, alignment, m_ratio, spinMax=0.
 	newSpinMagnitude = np.zeros_like(spinMagnitude)
 	spunToMaximum = m_ratio >= r_ISCO**0.5
 	newSpinMagnitude[spunToMaximum] = spinMax
-	newSpinMagnitude[~spunToMaximum] = np.maximum(np.minimum(np.sqrt(r_ISCO[~spunToMaximum])/3/m_ratio[~spunToMaximum] * (4 - (3*r_ISCO[~spunToMaximum]/m_ratio[~spunToMaximum]**2 - 2)**0.5), spinMax), 0)
+
+	newSpinMagnitude[~spunToMaximum] = np.minimum(np.abs(np.sqrt(r_ISCO[~spunToMaximum])/3/m_ratio[~spunToMaximum] * (4 - (3*r_ISCO[~spunToMaximum]/m_ratio[~spunToMaximum]**2 - 2)**0.5)), spinMax)
 
 	#Note: this does not currently keep track of the final alignment state. Do we want to?
 
