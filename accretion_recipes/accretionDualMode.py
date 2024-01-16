@@ -78,9 +78,9 @@ def accretionDualMode(mass, spinMagnitude, alignment, timeStep, time, f_EddBurst
 
 		growthFromSteady[hasSteadyTime] += newMass[hasSteadyTime]
 
-	if np.any(growthFromBurst < 0):
-		import pdb; pdb.set_trace()
-	if np.any(growthFromSteady < 0):
-		import pdb; pdb.set_trace()
+	#0 luminosity if there was quasar time, but it shut off.
+	dormant = hasQuasarTime & ~hasSteadyTime & (timeAsQuasar < timeStep)
+	finalfEdd[dormant] = 0
+	finalLuminosity[dormant] = 0
 
 	return newMass, newSpinMagnitude, finalLuminosity, finalfEdd, growthFromBurst, growthFromSteady
