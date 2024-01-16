@@ -52,9 +52,13 @@ def computeSpinDistribution(ensemble, redshift, Mbh_range=[0,np.inf], Mhalo_rang
 		for key, filterRange in zip(filterKeys, filterRanges):
 			try:
 				mask = mask & (megaDict[key] >= filterRange[0]) & (megaDict[key] <= filterRange[1])
+			except:
+				import pdb; pdb.set_trace()
+			"""
 			except KeyError:
 				warnings.warn(f"{key} was not saved in this file. Skipping this filter.")
 				pass
+			"""
 		spinValues.extend(megaDict['spin_bh'][mask])
 		spinWeights.extend(np.full(np.sum(mask), sf.calcHaloNumberDensity(hostHaloMass, treeStartingRedshift)))
 		treeIndices.extend(megaDict['treeIndex'][mask])
@@ -64,7 +68,7 @@ def computeSpinDistribution(ensemble, redshift, Mbh_range=[0,np.inf], Mhalo_rang
 	spinWeights = np.array(spinWeights)
 	treeIndices = np.array(treeIndices)
 	
-	storedBootstraps = np.zeros((len(xaxis),n_bootstrap)
+	storedBootstraps = np.zeros((len(xaxis),n_bootstrap))
 	for n_boot in range(n_bootstrap):
 		#Random subsample with replacement...
 		randomIndices = np.random.randint(0, nHalos, nHalos)

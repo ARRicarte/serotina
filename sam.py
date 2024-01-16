@@ -56,6 +56,7 @@ class SAM(object):
 
 		#Stellar masses
 		self.m_star = smhm.Mstar(self.m_halo, self.redshift)
+		self.nodeProperties.append('m_star')
 
 		#Set up storage.  Black holes move among progenitors, which move along nodes.  If you ever want to start over, use self.initializeStorage()
 		if not silent:
