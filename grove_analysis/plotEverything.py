@@ -19,6 +19,7 @@ from . import plotHaloMassFunctions as haloMass
 from . import plotBlackHoleDensity as amd
 from . import plotMergedMassFraction as pmf
 from . import calcGravitationalWaveEvents as gwe
+from . import plotSpinDistributions as psd
 
 def plotEverything(ensembles, colors, labels, outFolder, \
 	numberOfDexToConvolve=0.3, logHostMassRange=(10.6,15.0), n_mass=23, n_sample=20, iso=None, alphaBeta=None, \
@@ -26,7 +27,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 	blq_mass_funct=False, mass_funct_local=False, occupation=False, mass_weighted_occupation=False, \
 	mergerFraction=False, ms_evolution=False, lum_past6=False, mass_past6=False, coevolution=False, \
 	illustrateConvolution=False, assemblyHistoryUnnormed=False, assemblyHistoryNormed=False, \
-	relativeMsigma=False, accretedMassDensity=False, halo_mass_funct=False, blackHoleMergers=False, occupationIndex=3):
+	relativeMsigma=False, accretedMassDensity=False, halo_mass_funct=False, blackHoleMergers=False, spinDistributions=False, occupationIndex=3):
 
 	#Make a folder
 	if outFolder[-1] != '/':
@@ -243,6 +244,14 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 		gwe.plotEventRateByRedshift(gw_packs_z, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(0,20), output=outFolder+'gw_byz.pdf')
 		gwe.plotEventRateByMass(gw_packs_m, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(3e2,1e6), output=outFolder+'gw_bym.pdf')
 		gwe.computeTotalEvents(gw_packs_m, yearsOfObservation=4)
+
+	#Bolometric luminosity functions
+	if spinDistributions:
+		print("Spin")
+		redshiftSlices = [0.0, 2.0, 6.0]; xlim=(0,1); ylim=(0,1); figsize=(8,4)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e6,1e7], show=False, output=outputFolder+'spin_6to7.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e7,1e8], show=False, output=outputFolder+'spin_7to8.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,1e9], show=False, output=outputFolder+'spin_8to9.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
 
 if __name__ == '__main__':
 
