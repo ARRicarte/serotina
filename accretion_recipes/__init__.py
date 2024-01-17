@@ -4,3 +4,4 @@ from .calcRadiativeEfficiency import *
 from .integrateAccretion import *
 from .accretionDualMode import *
 from .calcEddingtonLuminosity import *
+from .spinEvolverMAD import *

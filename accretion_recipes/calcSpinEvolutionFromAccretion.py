@@ -21,3 +21,5 @@ def calcSpinEvolutionFromAccretion(spinMagnitude, alignment, m_ratio, spinMax=0.
 	#Note: this does not currently keep track of the final alignment state. Do we want to?
 
 	return newSpinMagnitude
+
+

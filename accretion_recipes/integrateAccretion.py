@@ -3,6 +3,7 @@ import numpy as np
 from .calcSpinEvolutionFromAccretion import *
 from .calcRadiativeEfficiency import *
 from .calcEddingtonLuminosity import *
+from .spinEvolverMAD import *
 
 t_Edd = constants.t_Sal / constants.yr / 1e9
 def integrateAccretion(mass, spinMagnitude, f_Edd, timeStep, alignment, includeSpinDependence=False, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998, fiducialRadiativeEfficiency=0.1):
@@ -23,7 +24,7 @@ def integrateAccretion(mass, spinMagnitude, f_Edd, timeStep, alignment, includeS
 	newMass = mass * np.exp(f_Edd * timeStep / t_Edd * (1.0-efficiency)/efficiency)
 
 	#Assuming the radiative efficiency hasn't changed significantly during this time step, return the luminosity at the final time.
-	luminosity = f_Edd * calcEddingtonLuminosity(mass)
+	luminosity = f_Edd * calcEddingtonLuminosity(newMass)
 
 	if includeSpinDependence:
 		#Evolve spin.  Currently, only a thin disk is implemented.
@@ -32,3 +33,24 @@ def integrateAccretion(mass, spinMagnitude, f_Edd, timeStep, alignment, includeS
 	else:
 		newSpinMagnitude = spinMagnitude
 	return newMass, newSpinMagnitude, luminosity
+
+def integrateAccretion_MAD(mass, spinMagnitude, f_Edd, timeStep, alignment, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998):
+	"""
+	Account for MAD disks and use an integrator to evolve mass and spin.  Not optimized.
+	"""
+
+	newMass = np.zeros_like(mass)
+	newSpinMagnitude = np.zeros_like(spinMagnitude)
+	luminosity = np.zeros_like(luminosity)
+
+	#A for loop with Runge-Kutta, surely very slow.  Relaxed some precision requirements.
+	for index in range(len(mass)):
+		integrator = SpinEvolverRK45(mass[index], spinMagnitude[index]*(-1)**int(alignment[index]), f_Edd[index], nsteps=100, maximumTime_yr=timeStep[index], minimumSpin=-spinMax, maximumSpin=spinMax, \
+		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]/10, minimumFractionalTimeResolution=1.0)
+		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
+		newMass[index] = integrator.mass[integrator.currentIndex]
+		newSpinMagnitude[index] = np.abs(integrator.spin[integrator.currentIndex])
+		luminosity[index] = f_Edd[index] * newMass[index]
+
+	return newMass, newSpinMagnitude, luminosity
+		
