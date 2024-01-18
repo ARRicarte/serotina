@@ -37,17 +37,20 @@ def integrateAccretion(mass, spinMagnitude, f_Edd, timeStep, alignment, includeS
 def integrateAccretion_MAD(mass, spinMagnitude, f_Edd, timeStep, alignment, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998):
 	"""
 	Account for MAD disks and use an integrator to evolve mass and spin.  Not optimized.
+
+	f_EddCrit not currently being used, nor is includeHotTransition.  Add later.
 	"""
 
 	newMass = np.zeros_like(mass)
-	newSpinMagnitude = np.zeros_like(spinMagnitude)
-	luminosity = np.zeros_like(luminosity)
+	newSpinMagnitude = np.zeros_like(mass)
+	luminosity = np.zeros_like(mass)
 
 	#A for loop with Runge-Kutta, surely very slow.  Relaxed some precision requirements.
 	for index in range(len(mass)):
-		integrator = SpinEvolverRK45(mass[index], spinMagnitude[index]*(-1)**int(alignment[index]), f_Edd[index], nsteps=100, maximumTime_yr=timeStep[index], minimumSpin=-spinMax, maximumSpin=spinMax, \
-		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]/10, minimumFractionalTimeResolution=1.0)
+		integrator = SpinEvolverRK45(mass[index], spinMagnitude[index]*(-1)**(int(alignment[index])+1), f_Edd[index], nsteps=100, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
+		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
+		integrator.integrateAll(constantEddingtonRatioFunction)
 		newMass[index] = integrator.mass[integrator.currentIndex]
 		newSpinMagnitude[index] = np.abs(integrator.spin[integrator.currentIndex])
 		luminosity[index] = f_Edd[index] * newMass[index]

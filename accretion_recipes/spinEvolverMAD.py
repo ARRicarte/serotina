@@ -177,7 +177,7 @@ class SpinEvolverRK45(object):
 	Use Runge-Kutta-Fehlberg algorithm to integrate spin, mass, and jet power at once.
 	"""
 
-	def __init__(self, M0, a0, fEdd0, nsteps=1e6, maximumTime_yr=13.8e9, maximumMass=2e10, minimumSpin=-0.99999, maximumSpin=0.998, allowedFractionalMassError=1e-10, allowedSpinError=1e-10, initialTimeStep_yr=1e6, minimumFractionalTimeResolution=0.001):
+	def __init__(self, M0, a0, fEdd0, nsteps=1e6, maximumTime_yr=13.8e9, maximumMass=np.inf, minimumSpin=-0.998, maximumSpin=0.998, allowedFractionalMassError=1e-10, allowedSpinError=1e-10, initialTimeStep_yr=1e6, minimumFractionalTimeResolution=0.001, silent=True):
 
 		#Some cleanup
 		M0 = float(M0)
@@ -212,6 +212,7 @@ class SpinEvolverRK45(object):
 		self.minimumSpin = minimumSpin
 		self.allowedFractionalMassError = allowedFractionalMassError
 		self.allowedSpinError = allowedSpinError
+		self.silent = silent
 
 		#The RKF algorithm needs coefficients which are hard-coded here...
 		self._A = np.array([0.0, 2.0/9.0, 1.0/3.0, 3.0/4.0, 1.0, 5.0/6.0])
@@ -277,7 +278,8 @@ class SpinEvolverRK45(object):
 			if (stepsizeFactor_mass >= 1) & (stepsizeFactor_spin >= 1):
 				stepTakenWithinError = True
 			self.timeStep *= np.min([stepsizeFactor_mass,stepsizeFactor_spin,100,(self.minimumFractionalTimeResolution*self.time[self.currentIndex]+self.timeStep)/self.timeStep])
-			print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
+			if not self.silent:
+				print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
 
 		#If you succeeded, let's make some global changes.
 		self.time[self.currentIndex+1] = self.time[self.currentIndex] + self.timeStep
@@ -286,7 +288,8 @@ class SpinEvolverRK45(object):
 		self.eddingtonRatio[self.currentIndex+1] = eddingtonRatioFunction(self.time[self.currentIndex+1], self.mass[self.currentIndex+1], self.spin[self.currentIndex])
 		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1])
 		self.currentIndex += 1
-		print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
+		if not self.silent:
+			print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
 
 		#Finally, check termination conditions.
 		if (self.time[self.currentIndex] > self.maximumTime_yr) | (self.mass[self.currentIndex] > self.maximumMass) | (self.currentIndex > self.maximumSteps-2): 
