@@ -1,7 +1,7 @@
 import numpy as np
 from .calcISCO import *
 
-def calcRadiativeEfficiency(spinMagnitude, f_Edd, alignment, f_EddCrit=3e-2, includeSpinDependence=True, includeHotTransition=False, fiducialDefault=0.1):
+def calcRadiativeEfficiency(spin, f_Edd, f_EddCrit=3e-2, includeSpinDependence=True, includeHotTransition=False, fiducialDefault=0.1):
 	"""
 	Calculate the radiative efficiency of a BH accretion disk based on its spin and Eddington ratio.
 
@@ -9,8 +9,8 @@ def calcRadiativeEfficiency(spinMagnitude, f_Edd, alignment, f_EddCrit=3e-2, inc
 	"""
 
 	f_Edd = np.atleast_1d(f_Edd)
-	alignment = np.atleast_1d(alignment)
-	spin = np.atleast_1d(spinMagnitude) * (-1)**(1+alignment)
+	spin = np.atleast_1d(spin)
+
 	assert len(spin) == len(f_Edd)
 
 	if includeSpinDependence:
