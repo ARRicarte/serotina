@@ -172,25 +172,22 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 			treeStartingRedshift=treeStartingRedshift, transformFunction=transformFunction, n_bootstrap=n_bootstrap, xaxis=xaxis)
 			plotSpinDistribution(xaxis, distribution, fig_ax=(fig,ax), doFormatting=False, color=color, label=label, show=False)
 
-			#Formatting
-			ax.set_xlim(xlim)
-			ax.set_ylim(ylim)
-			ax.set_xlabel(xlabel, fontsize=fontsize)
-			if z_index == 0:
-				ax.set_ylabel(ylabel, fontsize=fontsize)
-				if listOfLabels is not None:
-					ax.legend(frameon=False, fontsize=fontsize)
-			else:
-				ax.set_yticklabels([])
-			ax.text(0.05, 0.95, f"z={redshift:1.1f}", fontsize=fontsize, ha='left', va='top', transform=ax.transAxes)
+
+	for z_index in range(len(listOfRedshifts)):
+		#Formatting
+		ax.set_xlim(xlim)
+		ax.set_ylim(ylim)
+		ax.set_xlabel(xlabel, fontsize=fontsize)
+		if z_index == 0:
+			ax.set_ylabel(ylabel, fontsize=fontsize)
+			if listOfLabels is not None:
+				ax.legend(frameon=False, fontsize=fontsize)
+		else:
+			ax.set_yticklabels([])
+		ax.text(0.05, 0.95, f"z={redshift:1.1f}", fontsize=fontsize, ha='left', va='top', transform=ax.transAxes)
 	
 	fig.tight_layout()
 	if show:
 		fig.show()
 	if output is not None:
 		fig.savefig(output, dpi=400)
-
-			
-			
-
-

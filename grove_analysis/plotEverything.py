@@ -252,6 +252,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e6,1e7], show=False, output=outputFolder+'spin_6to7.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
 		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e7,1e8], show=False, output=outputFolder+'spin_7to8.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
 		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,1e9], show=False, output=outputFolder+'spin_8to9.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,np.inf], show=False, output=outputFolder+'spin_8toinf.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
 
 if __name__ == '__main__':
 

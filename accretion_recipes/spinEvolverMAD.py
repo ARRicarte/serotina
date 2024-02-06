@@ -269,14 +269,22 @@ class SpinEvolverRK45(object):
 				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd)
 			proposedMass = self.mass[self.currentIndex] + np.sum(self._CH * k_list_mass)
 			truncationError_mass = np.abs(np.sum(self._CT * k_list_mass))
-			stepsizeFactor_mass = 0.9 * (self.allowedFractionalMassError / (truncationError_mass/self.mass[self.currentIndex]))**0.2
+			if truncationError_mass > 0:
+				stepsizeFactor_mass = 0.9 * (self.allowedFractionalMassError / (truncationError_mass/self.mass[self.currentIndex]))**0.2
+			else:
+				stepsizeFactor_mass = np.inf
 			proposedSpin = np.maximum(self.minimumSpin, np.minimum(self.maximumSpin, self.spin[self.currentIndex] + np.sum(self._CH * k_list_spin)))
 			truncationError_spin = np.abs(np.sum(self._CT * k_list_spin))
-			stepsizeFactor_spin = 0.9 * (self.allowedSpinError / truncationError_spin)**0.2
+			if truncationError_spin > 0:
+				stepsizeFactor_spin = 0.9 * (self.allowedSpinError / truncationError_spin)**0.2
+			else:
+				stepsizeFactor_spin = np.inf
 
 			#Check if the errors are within tolerances
 			if (stepsizeFactor_mass >= 1) & (stepsizeFactor_spin >= 1):
 				stepTakenWithinError = True
+
+			#Note that the timestep is only allowed to increase by a factor of 100
 			self.timeStep *= np.min([stepsizeFactor_mass,stepsizeFactor_spin,100,(self.minimumFractionalTimeResolution*self.time[self.currentIndex]+self.timeStep)/self.timeStep])
 			if not self.silent:
 				print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")

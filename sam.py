@@ -158,10 +158,11 @@ class SAM(object):
 		self.L_bol = np.empty(0)
 		self.lastIntegrationTime = np.empty(0)
 		self.scheduledMergeTime = np.empty(0)
+		self.scheduledFlipTime = np.empty(0)
 
 		self.blackHoleProperties = ['bh_id', 'm_bh', 'm_init', 'm_merged', 'm_burst', 'm_steady', 'spin_bh', 'seedType', 'bhToProg', \
 		'seedTime', 't_decline', 't_fEdd', 'mode', 'accretionBudget', 'merged_bh', 'wandering', 'eddRatio', 'L_bol', 'lastIntegrationTime', \
-		'scheduledMergeTime']
+		'scheduledMergeTime', 'scheduledFlipTime']
 
 		#This special list is populated with M1, q, and z whenever a black hole merger occurs.
 		self.bh_mergers = np.empty((0,3))
@@ -302,6 +303,7 @@ class SAM(object):
 			self.L_bol = np.concatenate((self.L_bol, np.zeros(n_new)))
 			self.lastIntegrationTime = np.concatenate((self.lastIntegrationTime, np.full(n_new,self.uniqueTime[self.step])))
 			self.scheduledMergeTime = np.concatenate((self.scheduledMergeTime, np.zeros(n_new)))
+			self.scheduledFlipTime = np.concatenate((self.scheduledFlipTime, np.zeros(n_new)))
 		
 	def mergeBHs(self, primaries, secondaries, progenitors, times):
 		"""
@@ -365,6 +367,7 @@ class SAM(object):
 		self.bhToProg[bh_ids] = -1
 		self.merged_bh[bh_ids] = True
 		self.scheduledMergeTime[bh_ids] = 0
+		self.scheduledFlipTime[bh_ids] = 0
 		self.accretionBudget[bh_ids] = 0
 		self.t_decline[bh_ids] = 0
 		self.mode[bh_ids] = ''
@@ -377,6 +380,7 @@ class SAM(object):
 		self.bhToProg[bh_ids] = targets
 		self.wandering[bh_ids] = True
 		self.scheduledMergeTime[bh_ids] = 0
+		self.scheduledFlipTime[bh_ids] = 0
 		self.accretionBudget[bh_ids] = 0
 		self.t_decline[bh_ids] = 0		
 		self.mode[bh_ids] = ''
