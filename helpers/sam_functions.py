@@ -509,3 +509,21 @@ def calcRecoilEscapeVelocity_01t(M_halo, z):
 	log10V0z = 1.08e-5*z**3 + 0.000710*z**2 + 0.0224*z + 2.12
 	alphaz = 5.49e-5*z**3 - 0.00183*z**2 + 0.0243*z + 0.341
 	return 10**log10V0z * (M_halo/1e10)**alphaz
+
+#######################
+##Retrograde Flipping##
+#######################
+
+def computeAccretionAlignmentFlipTime(M_bh, z, parameters=[0.1]):
+
+	M_bh = np.atleast_1d(M_bh)
+	z = np.atleast_1d(z)
+
+	#Scale the alignment flip time using a free parameter, times the dynamical time.  May add more parameters later.
+	timescale = t_dyn(z) * parameters[0]
+
+	#Wait times for Poisson distributed events follow an exponential.  
+	waitTimes = -timescale*np.log(1.0 - np.random.uniform(size=len(M_bh)))
+
+	return waitTimes
+
