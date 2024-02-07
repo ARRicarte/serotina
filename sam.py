@@ -560,12 +560,9 @@ class SAM(object):
 				#No steady mode for satellites due to RPS
 				f_EddMin[self.satelliteToCentral[self.bhToProg[accretors]]!=-1] = 0
 
-			#Prograde or retrograde?
-			alignments = np.random.choice([True,False], size=len(accretors), p=[self.diskAlignmentProbability,1.0-self.diskAlignmentProbability])
-
 			#The actual integration step.
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
-			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], alignments, timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
+			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
 			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD=self.MAD)
 
@@ -903,6 +900,15 @@ class SAM(object):
 					majorMergingTargets = self.satelliteToCentral[mergingHalos]
 					majorMergingTimes = self.haloMergerTime[mergingHalos]
 
+					###################
+					##FIND DISK FLIPS##
+					###################
+
+					#Unlike this other items, this one using the black hole index.
+					flippingTargets, = np.where((self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0))
+					flippingBlackHoleHosts = self.progToNode[self.bhToProg[flippingTargets]]
+					flippingTimes = self.scheduledFlipTime[flippingTargets]
+
 					###########################
 					##FIND BLACK HOLE MERGERS##
 					###########################
@@ -917,16 +923,17 @@ class SAM(object):
 						holeMergingTimes = []
 
 					#Make sure there's something to do.  If there isn't, you're done.
-					if len(mergingHalos) + len(holesToMerge) + len(feedingHalos) == 0:
+					if len(mergingHalos) + len(holesToMerge) + len(feedingHalos) +len(flippingTargets) == 0:
 						break
 
 					#Create a combined queue and order it.
-					queueTimes = np.concatenate((majorMergingTimes,holeMergingTimes,feedingTimes))
-					queueIndices = np.concatenate((mergingHalos,holesToMerge,feedingHalos))
-					queueTargets = np.concatenate((majorMergingTargets,holeTargets,feedingTargets))
+					queueTimes = np.concatenate((majorMergingTimes,holeMergingTimes,feedingTimes,flippingTimes))
+					queueIndices = np.concatenate((mergingHalos,holesToMerge,feedingHalos,flippingBlackHoleHosts))
+					queueTargets = np.concatenate((majorMergingTargets,holeTargets,feedingTargets,flippingTargets))
 					queueEventTypes = np.concatenate((np.full(len(majorMergingTimes), 'haloMerger'), \
 					np.full(len(holeMergingTimes), 'blackHoleMerger'), \
-					np.full(len(feedingHalos), 'feeding')))
+					np.full(len(feedingHalos), 'feeding'), \
+					np.full(len(flippingBlackHoleHosts), 'flipping')))
 					
 					eventOrder = np.argsort(queueTimes)
 					queueTimes = queueTimes[eventOrder]
@@ -935,6 +942,8 @@ class SAM(object):
 					queueEventTypes = queueEventTypes[eventOrder]
 
 					#This is an array that I must use to help sort the queue.  Whenever a black hole is present, have a 1 instead of 0. 
+
+					#NOTE: Add flipping?
 					isABlackHole = np.full(len(eventOrder), 0, dtype=int)
 					isABlackHole[queueEventTypes=='blackHoleMerger'] = 1
 

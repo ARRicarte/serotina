@@ -39,23 +39,21 @@ def accretionDualMode(mass, spin, timeStep, time, f_EddBurst, f_EddSteady, f_Edd
 		growthFromBurst[hasQuasarTime] -= newMass[hasQuasarTime]
 
 		#Radiative efficiency determines mass growth.
-		quasarRadiativeEfficiencies = calcRadiativeEfficiency(spin[hasQuasarTime], f_EddBurst[hasQuasarTime], alignment[hasQuasarTime], \
+		quasarRadiativeEfficiencies = calcRadiativeEfficiency(spin[hasQuasarTime], f_EddBurst[hasQuasarTime], \
 		f_EddCrit=f_EddCrit, includeSpinDependence=includeSpinDependence, fiducialDefault=fiducialRadiativeEfficiency, includeHotTransition=includeHotTransition)
 
 		#Infer time from the mass limit...
 		timeAsQuasar[hasQuasarTime] = np.minimum(np.log(maxBurstMass[hasQuasarTime]/mass[hasQuasarTime]) / f_EddBurst[hasQuasarTime] * t_Edd / (1.0-quasarRadiativeEfficiencies) * quasarRadiativeEfficiencies, timeStep[hasQuasarTime])
 
 		if MAD:
-			newMass[hasQuasarTime], newSpin[hasQuasarTime], finalLuminosity[hasQuasarTime] = integrateAccretion_MAD(mass[hasQuasarTime], spin[hasQuasarTime], f_EddBurst[hasQuasarTime], timeAsQuasar[hasQuasarTime], alignment[hasQuasarTime], \
+			newMass[hasQuasarTime], newSpin[hasQuasarTime], finalLuminosity[hasQuasarTime] = integrateAccretion_MAD(mass[hasQuasarTime], spin[hasQuasarTime], f_EddBurst[hasQuasarTime], timeAsQuasar[hasQuasarTime], \
 			includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax)
 		else:
-			newMass[hasQuasarTime], newSpin[hasQuasarTime], finalLuminosity[hasQuasarTime] = integrateAccretion(mass[hasQuasarTime], spin[hasQuasarTime], f_EddBurst[hasQuasarTime], timeAsQuasar[hasQuasarTime], alignment[hasQuasarTime], \
+			newMass[hasQuasarTime], newSpin[hasQuasarTime], finalLuminosity[hasQuasarTime] = integrateAccretion(mass[hasQuasarTime], spin[hasQuasarTime], f_EddBurst[hasQuasarTime], timeAsQuasar[hasQuasarTime], \
 			includeSpinDependence=includeSpinDependence, includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax, fiducialRadiativeEfficiency=fiducialRadiativeEfficiency)
 		finalfEdd[hasQuasarTime] = f_EddBurst[hasQuasarTime]
 
 		growthFromBurst[hasQuasarTime] += newMass[hasQuasarTime]
-
-		#NOTE: alignment flips are still an issue to think about.
 
 	#############
 	#STEADY MODE#
@@ -69,17 +67,17 @@ def accretionDualMode(mass, spin, timeStep, time, f_EddBurst, f_EddSteady, f_Edd
 		growthFromSteady[hasSteadyTime] -= newMass[hasSteadyTime]
 
 		#Radiative efficiency determines mass growth.  Note that we are accounting for any changes during the quasar mode.
-		steadyRadiativeEfficiencies = calcRadiativeEfficiency(newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], alignment[hasSteadyTime], \
+		steadyRadiativeEfficiencies = calcRadiativeEfficiency(newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], \
 		f_EddCrit=f_EddCrit, includeSpinDependence=includeSpinDependence, fiducialDefault=fiducialRadiativeEfficiency, includeHotTransition=includeHotTransition)
 
 		#Infer time from the mass limit
 		timeAsSteady[hasSteadyTime] = np.minimum(np.log(maxSteadyMass[hasSteadyTime]/mass[hasSteadyTime]) / f_EddSteady[hasSteadyTime] * t_Edd / (1.0-steadyRadiativeEfficiencies) * steadyRadiativeEfficiencies, timeStep[hasSteadyTime]-timeAsQuasar[hasSteadyTime])
 
 		if MAD:
-			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], alignment[hasSteadyTime], \
+			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], \
 			includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax)
 		else:
-			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], alignment[hasSteadyTime], \
+			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], \
 			includeSpinDependence=includeSpinDependence, includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax, fiducialRadiativeEfficiency=fiducialRadiativeEfficiency)
 		finalfEdd[hasSteadyTime] = f_EddSteady[hasSteadyTime]
 
