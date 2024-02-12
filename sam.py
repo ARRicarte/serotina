@@ -85,7 +85,7 @@ class SAM(object):
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignmentProbability': 0.5, 'MAD': False}
+		'diskAlignmentParameters': [np.inf], 'MAD': False}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -433,6 +433,10 @@ class SAM(object):
 		self.haloMergerTime[newSatellites] = self.computeHaloMergerTime(newSatellites, newCentrals)
 
 	def transferSatellitesAndHoles(self, lostProgenitors, targets):
+
+		lostProgenitors = np.atleast_1d(lostProgenitors)
+		targets = np.atleast_1d(targets)
+
 		for pair_index in range(len(lostProgenitors)):
 			#Anything that had a satellite assigned to the progenitors goes to the target instead
 			satellitesOfLost = self.satelliteToCentral==lostProgenitors[pair_index]
@@ -580,10 +584,34 @@ class SAM(object):
 			self.eddRatio[nonAccretors] = 0
 		self.lastIntegrationTime[bhs] = times
 
+	def integrateBHs(self, bhs, endTime, integratingMethod):
+		"""
+		Integrate a list of BHs up to some end time.
+		"""
+
+		bhs = np.atleast_1d(bhs)
+		timeSteps = endTime - self.lastIntegrationTime[bhs]
+		nonwanderer = (~self.wandering[bhs]) & (~self.merged_bh[bhs])
+		toIntegrate = nonwanderer & (timeSteps>0)
+		if np.any(toIntegrate):
+			integratingMethod(bhs[toIntegrate], timeSteps[toIntegrate], np.full(np.sum(toIntegrate), endTime))
+
+	def integrateBHsOfProgenitor(self, progenitors, endTime, integratingMethod, includeMerging=True, includeWandering=False):
+		"""
+		Integrate all of the BHs of a progenitor, or list of progenitors
+		"""
+
+		progenitors = np.atleast_1d(progenitors)
+		matchedProgenitors, associatedBHs = self.findMatchingBlackHolesToProgenitor(progenitors, includeMerging=includeMerging, includeWandering=includeWandering)
+		if len(associatedBHs) > 0:
+			self.integrateBHs(associatedBHs, endTime, integratingMethod)
+
 	def findMatchingBlackHolesToProgenitor(self, progenitorIndices, includeCentral=True, includeWandering=False, includeMerging=False):
 		"""
 		Given a list of progenitor indices, match them up with their associated black holes.
 		"""
+
+		progenitorIndices = np.atleast_1d(progenitorIndices)
 
 		#At no point would you ever want to include the ones which have merged already; these aren't real
 		mask = ~self.merged_bh
@@ -595,7 +623,13 @@ class SAM(object):
 			mask = mask & (self.wandering | (self.scheduledMergeTime > 0))
 		relevantBHs, = np.where(mask)
 		bh_matches = crossmatch(self.bhToProg[mask], progenitorIndices)
-		return np.atleast_1d(progenitorIndices[bh_matches[1]]), np.atleast_1d(relevantBHs[bh_matches[0]])
+		if len(bh_matches[0]) > 0:
+			try:
+				return np.atleast_1d(progenitorIndices[bh_matches[1]]), np.atleast_1d(relevantBHs[bh_matches[0]])
+			except:
+				import pdb; pdb.set_trace()
+		else:
+			return np.array([]), np.array([])
 
 	def printProperties(self, index):
 		"""
@@ -770,6 +804,223 @@ class SAM(object):
 			#Return all of the lists
 			return self.snapshotDict
 
+	def findUniverseInterruptions(self, time):
+		"""
+		Sometimes things happen in between timesteps.  Find them for evaluation.
+		"""
+
+		#Ignore any progenitors that are stripped, merged, or not formed yet.
+		isRelevant = (~self.stripped) & (~self.merged) & (self.time[self.progToNode] <= time)
+
+		relevantHalosOrBlackHoles = []
+		times = []
+		types = []
+
+		#######################
+		##FIND FEEDING EVENTS##
+		#######################
+
+		isFeeding = isRelevant & (self.feedTime <= time)
+		if np.any(isFeeding):
+			#relevantHalosOrBlackHoles.extend([[halo] for halo in np.where(isFeeding)])
+			relevantHalosOrBlackHoles.extend(np.where(isFeeding)[0])
+			times.extend(self.feedTime[isFeeding])
+			types.extend(['feeding']*np.sum(isFeeding))
+
+		#####################
+		##FIND HALO MERGERS##
+		#####################
+
+		isMerging = isRelevant & (self.haloMergerTime <= time)
+		if np.any(isMerging):
+			mergingHalos, = np.where(isMerging)
+			majorMergingTargets = self.satelliteToCentral[mergingHalos]
+			relevantHalosOrBlackHoles.extend([[mergingHalos[i],majorMergingTargets[i]] for i in range(len(majorMergingTargets))])
+			times.extend(self.haloMergerTime[mergingHalos])
+			types.extend(['haloMerger']*np.sum(isMerging))
+
+		###################
+		##FIND DISK FLIPS##
+		###################
+
+		#Unlike this other items, this one using the black hole index.
+		isFlipping = (self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0)
+		if np.any(isFlipping):
+			relevantHalosOrBlackHoles.extend(np.where(isFlipping)[0])
+			times.extend(self.scheduledFlipTime[isFlipping])
+			types.extend(['diskFlip']*np.sum(isFlipping))
+		
+		###########################
+		##FIND BLACK HOLE MERGERS##
+		###########################
+
+		if self.useDelayTimes:
+			#Otherwise, this has already happened during a halo merger.
+			isBHMerging = (self.scheduledMergeTime <= time) & (self.scheduledMergeTime > 0)
+			if np.any(isBHMerging):
+				holesToMerge, = np.where(isBHMerging)
+				holeTargets = self.bhToProg[holesToMerge]
+				#Note that the target is a progenitor, not a black hole.
+				relevantHalosOrBlackHoles.extend([[holesToMerge[i],holeTargets[i]] for i in range(len(holesToMerge))])
+				times.extend(self.scheduledMergeTime[holesToMerge])
+				types.extend(['blackHoleMerger']*np.sum(isBHMerging))
+
+		#Wrap up, then order by time.
+		if len(times) > 0:
+			eventOrder = np.argsort(times)
+			times = [times[i] for i in eventOrder]
+			relevantHalosOrBlackHoles = [relevantHalosOrBlackHoles[i] for i in eventOrder]
+			types = [types[i] for i in eventOrder]
+		return times, relevantHalosOrBlackHoles, types
+
+	def resolveUniverseInterruption(self, time, relevantHaloOrBlackHole, eventType, integrateAll):
+		"""
+		Resolve an individual interruption.
+		"""
+
+		#Turn on BHs
+		if eventType == 'feeding':
+			if self.supernovaBarrier:
+				#See if SN feedback prevents AGN from triggering.
+				Mcrit = sf.Mcrit(self.uniqueRedshift[self.step])
+				aboveSpecialHaloMass = self.m_halo[self.progToNode[relevantHaloOrBlackHole]] > Mcrit
+				if aboveSpecialHaloMass:
+					#Never mind.  
+					return
+
+			#Find corresponding central black holes, if they exist
+			if np.any(self.bhToProg == relevantHaloOrBlackHole):
+				matchedProgenitor, feedingHole = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole)
+				self.integrateBHs(feedingHole, time, integrateAll)
+
+				#Activate feeding.
+				if self.useColdReservoir:
+					#Give the fuel that let's you get to M-sigma (of this instant)
+					self.accretionBudget[feedingHole] += np.maximum(self.capFudgeFactor * self.M_bhSigma(matchedProgenitor) - self.m_bh[feedingHole], 0)
+					if self.constant_f_max is not None:
+						self.eddRatio[feedingHole] = np.full(len(feedingHole), self.constant_f_max)
+					else:
+						#Push Eddington ratio to something appropriate for a Type I AGN.
+						self.eddRatio[feedingHole] = sf.draw_typeI(len(feedingHole), np.full(len(feedingHole), self.uniqueRedshift[self.step]))
+				else:
+					self.mode[feedingHole] = 'quasar'
+				if self.spinEvolution:
+					self.scheduledFlipTime[feedingHole] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
+			self.feedTime[relevantHaloOrBlackHole] = np.inf
+
+		#Merge BHs
+		elif eventType == 'blackHoleMerger':
+			#Integrate all relevant BHs up to this point.  Including any merging BHs in this list.
+			self.integrateBHs(relevantHaloOrBlackHole[0], time, integrateAll)
+			self.integrateBHsOfProgenitor(relevantHaloOrBlackHole[1], time, integrateAll)
+			self.transferBHs(relevantHaloOrBlackHole[0], relevantHaloOrBlackHole[1], chunkTimes[isBHMerger])
+
+		#Halo Mergers
+		elif eventType == 'haloMerger':
+			self.integrateBHsOfProgenitor(relevantHaloOrBlackHole, time, integrateAll, includeMerging=True, includeWandering=True)
+
+			#Transfer BHs to target halos
+			bh_homes, bh_indices = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole[0], includeMerging=True, includeWandering=True)
+
+			#Either queue up eventual BH mergers or merge the BHs immediately.
+			if len(bh_indices) > 0:
+				bh_targets = np.full(len(bh_indices), relevantHaloOrBlackHole[1])
+				if self.useDelayTimes:
+					#Compute the probability that the BHs will eventually merge, then queue it up.
+					smhm_redshift = cosmology_functions.t2z(bh_merge_times)
+					stellarMassMerging = self.m_star[self.progToNode[self.bhToProg[bh_indices]]]
+					stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
+					mergerProbabilities = sf.mergerProbability(stellarMassTarget, stellarMassMerging/stellarMassTarget)
+					self.allMergerProbabilities = np.concatenate([self.allMergerProbabilities,mergerProbabilities])
+					#Set the merger probability to 1 if the target doesn't currently have a black hole.
+					mergerProbabilities[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = 1
+
+					toEventuallyMerge = np.random.random(len(bh_indices)) < mergerProbabilities
+					if np.any(toEventuallyMerge):
+						self.scheduleBHTransfer(bh_indices[toEventuallyMerge], bh_targets[toEventuallyMerge], bh_merge_times[toEventuallyMerge])
+					if np.any(~toEventuallyMerge):
+						self.createWanderers(bh_indices[~toEventuallyMerge], bh_targets[~toEventuallyMerge])
+				else:
+					if self.mergerMode == 'flatProbability':
+						toMerge = np.random.random(len(bh_indices)) < self.blackHoleMergerProbability
+					elif self.mergerMode == 'fabioProbability':
+						stellarMassMerging = self.m_star[self.progToNode[self.bhToProg[bh_indices]]]
+						stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
+						computedMergerProbabilities = fabioMergerProbabilities(stellarMassTarget, stellarMassMerging/stellarMassTarget)
+						toMerge = np.random.random(len(bh_indices)) < computedMergerProbabilities
+					#Set the merger probability to 1 if the target doesn't currently have a black hole.  TODO:  Do we really want this?  Probably not; turned off.
+					#toMerge[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = True
+					if np.any(toMerge):
+						self.transferBHs(bh_indices[toMerge], bh_targets[toMerge], np.full(np.sum(toMerge), time))
+					if np.any(~toMerge):
+						self.createWanderers(bh_indices[~toMerge], bh_targets[~toMerge])
+
+			#Finally merge those halos.
+			self.mergeHalo(relevantHaloOrBlackHole[0], relevantHaloOrBlackHole[1])
+			self.lastMajorMerger[relevantHaloOrBlackHole[0]] = time
+
+		#Disk Flips
+		elif eventType == 'diskFlip':
+			self.integrateBHs(relevantHaloOrBlackHole, time, integrateAll)
+			#Flip the spin, then set the next flip.
+			self.spin_bh[relevantHaloOrBlackHole] *= -1
+			self.scheduledFlipTime[relevantHaloOrBlackHole] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[relevantHaloOrBlackHole], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
+
+		'''
+		#Before doing so, locate any BHs that are affected and integrate those too.
+		mergingHalosWithHoles, holesInMergingHalos = self.findMatchingBlackHolesToProgenitor(chunkAllProgenitors, includeMerging=True, includeWandering=True)
+		if len(holesInMergingHalos) > 0:
+			timeMatcher = crossmatch(mergingHalosWithHoles, chunkAllProgenitors)
+			holesInMergingHalos = holesInMergingHalos[timeMatcher[0]]
+			time_stop = chunkAllProgenitorMergeTimes[timeMatcher[1]]
+			timeSteps = time_stop - self.lastIntegrationTime[holesInMergingHalos]
+			positiveTimes = timeSteps > 0
+			nonwanderers = (~self.wandering[holesInMergingHalos]) & (~self.merged_bh[holesInMergingHalos])
+			toIntegrate = positiveTimes & nonwanderers
+			if np.any(toIntegrate):
+				integrateAll(holesInMergingHalos[toIntegrate], timeSteps[toIntegrate], time_stop[toIntegrate])
+			#Transfer BHs to target halos
+			bh_homes, bh_indices = self.findMatchingBlackHolesToProgenitor(chunkIndices[isHaloMerger], includeMerging=True, includeWandering=True)
+			if len(bh_indices) > 0:
+				homeMatcher = crossmatch(bh_homes, chunkIndices[isHaloMerger])
+				bh_targets = chunkTargets[isHaloMerger][homeMatcher[1]]
+				bh_merge_times = chunkTimes[isHaloMerger][homeMatcher[1]]
+				bh_indices = bh_indices[homeMatcher[0]]
+				if self.useDelayTimes:
+					#Compute the probability that the BHs will eventually merge, then queue it up.
+					smhm_redshift = cosmology_functions.t2z(bh_merge_times)
+					stellarMassMerging = self.m_star[self.progToNode[self.bhToProg[bh_indices]]]
+					stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
+					mergerProbabilities = sf.mergerProbability(stellarMassTarget, stellarMassMerging/stellarMassTarget)
+					self.allMergerProbabilities = np.concatenate([self.allMergerProbabilities,mergerProbabilities])
+					#Set the merger probability to 1 if the target doesn't currently have a black hole.
+					mergerProbabilities[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = 1
+
+					toEventuallyMerge = np.random.random(len(bh_indices)) < mergerProbabilities
+					if np.any(toEventuallyMerge):
+						self.scheduleBHTransfer(bh_indices[toEventuallyMerge], bh_targets[toEventuallyMerge], bh_merge_times[toEventuallyMerge])
+					if np.any(~toEventuallyMerge):
+						self.createWanderers(bh_indices[~toEventuallyMerge], bh_targets[~toEventuallyMerge])
+				else:
+					if self.mergerMode == 'flatProbability':
+						toMerge = np.random.random(len(bh_indices)) < self.blackHoleMergerProbability
+					elif self.mergerMode == 'fabioProbability':
+						stellarMassMerging = self.m_star[self.progToNode[self.bhToProg[bh_indices]]]
+						stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
+						computedMergerProbabilities = fabioMergerProbabilities(stellarMassTarget, stellarMassMerging/stellarMassTarget)
+						toMerge = np.random.random(len(bh_indices)) < computedMergerProbabilities
+					#Set the merger probability to 1 if the target doesn't currently have a black hole.  TODO:  Do we really want this?
+					toMerge[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = True
+					if np.any(toMerge):
+						self.transferBHs(bh_indices[toMerge], bh_targets[toMerge], bh_merge_times[toMerge])
+					if np.any(~toMerge):
+						self.createWanderers(bh_indices[~toMerge], bh_targets[~toMerge])
+
+		#Finally merge those halos.
+		self.mergeHalo(chunkIndices[isHaloMerger], chunkTargets[isHaloMerger])
+		self.lastMajorMerger[chunkTargets[isHaloMerger]] = chunkTimes[isHaloMerger]
+		'''
+
 	def evolveUniverse(self, outputNameBase=None, savedRedshifts=None, savedProperties=['m_bh', 'm_halo', 'redshift'], saveMode='progenitors'):
 		"""
 		Evolve BHs forward in time.
@@ -879,10 +1130,15 @@ class SAM(object):
 				##INTEGRATE SUB-TIME STEP IN A QUEUE##
 				######################################
 
-				#Here, we iterate to make sure things happen in the right order.  Sometimes events cause other events, so we need to keep doing this on the fly.
-
 				while True:
+					#Here, we iterate to make sure things happen in the right order.  Sometimes events cause other events, so we need to keep doing this on the fly.
+					queueTimes, queueIndices, queueTypes = self.findUniverseInterruptions(time)
+					if len(queueTimes) == 0:
+						break
+					#Since interruptions can cause other interruptions, we only do the first, then regenerate the queue.
+					self.resolveUniverseInterruption(queueTimes[0], queueIndices[0], queueTypes[0], integrateAll)
 
+					'''
 					#######################
 					##FIND FEEDING EVENTS##
 					#######################
@@ -933,7 +1189,7 @@ class SAM(object):
 					queueEventTypes = np.concatenate((np.full(len(majorMergingTimes), 'haloMerger'), \
 					np.full(len(holeMergingTimes), 'blackHoleMerger'), \
 					np.full(len(feedingHalos), 'feeding'), \
-					np.full(len(flippingBlackHoleHosts), 'flipping')))
+					np.full(len(flippingBlackHoleHosts), 'diskFlip')))
 					
 					eventOrder = np.argsort(queueTimes)
 					queueTimes = queueTimes[eventOrder]
@@ -943,7 +1199,6 @@ class SAM(object):
 
 					#This is an array that I must use to help sort the queue.  Whenever a black hole is present, have a 1 instead of 0. 
 
-					#NOTE: Add flipping?
 					isABlackHole = np.full(len(eventOrder), 0, dtype=int)
 					isABlackHole[queueEventTypes=='blackHoleMerger'] = 1
 
@@ -1038,6 +1293,7 @@ class SAM(object):
 						if np.any(toIntegrate):
 							integrateAll(holesInMergingHalos[toIntegrate], timeSteps[toIntegrate], time_stop[toIntegrate])
 
+						#Here
 						#Transfer BHs to target halos
 						bh_homes, bh_indices = self.findMatchingBlackHolesToProgenitor(chunkIndices[isHaloMerger], includeMerging=True, includeWandering=True)
 						if len(bh_indices) > 0:
@@ -1082,6 +1338,7 @@ class SAM(object):
 					#Reevaluate after halo mergers are complete
 					isRelevant = (~self.stripped) & (~self.merged) & (self.time[self.progToNode] <= time)
 
+				'''
 				#Recalculate after halo mergers are complete
 				isRelevant = (~self.stripped) & (~self.merged) & (self.time[self.progToNode] <= time)
 				relevantBHs = (~self.merged_bh) & (self.seedTime <= time) & (~self.wandering)
@@ -1090,6 +1347,7 @@ class SAM(object):
 				##INTEGRATE ALL TIME-DEPENDENT EQUATIONS##
 				##########################################
 
+				'''
 				#Integrate all equations
 				bh_indices = np.where(relevantBHs)[0]
 				timeSteps = np.full(len(bh_indices), time) - self.lastIntegrationTime[bh_indices]
@@ -1098,8 +1356,12 @@ class SAM(object):
 				toIntegrate = positiveTimes & nonwanderers
 				if np.any(toIntegrate):
 					integrateAll(bh_indices[toIntegrate], timeSteps[toIntegrate], np.full(np.sum(toIntegrate), time))
+				'''
+
+				self.integrateBHs(np.where(relevantBHs)[0], time, integrateAll)
 
 				#Reform disks in any halos that have not had any mergers in 5 Gyr and have v<300 km/s
+				#TODO: This is really outdated. Look up any new information, and potentially do this during the merger step.
 				if self.makeEllipticals:
 					newDisks = np.where(isRelevant & (self.elliptical) & (time-self.lastMajorMerger >= 5) & \
 					(sf.v_peak(self.m_halo[self.progToNode], self.redshift[self.progToNode])<300))[0]
@@ -1109,6 +1371,7 @@ class SAM(object):
 			##FILL FEEDINGLIST##
 			####################
 
+			#This is probably fine... not touching this.  2/12/24
 			if (self.step != self.nSteps-1) & (self.uniqueRedshift[self.step] < self.z_superEdd):
 				#Find halos whose mass have changed by a large fraction and haven't just grown by smooth accretion.
 				feedingListMask = isRelevant & (self.progToNode != self.progenitor[self.parent[self.progToNode]]) & (self.satelliteToCentral!=-1) & \
@@ -1156,8 +1419,8 @@ if __name__ == "__main__":
 	#Run the SAM
 	outputNameBase = 'test'
 	savedProperties = ['m_bh', 'm_halo', 'indices', 'L_bol', 'eddRatio', 'spin_bh', 'redshift', \
-    'elliptical', 'time', 'lastMajorMerger', 'bhToProg', 'bh_id', 'satelliteToCentral', \
-    'm_steady', 'm_burst', 'sigma']
+	'elliptical', 'time', 'lastMajorMerger', 'bhToProg', 'bh_id', 'satelliteToCentral', \
+	'm_steady', 'm_burst', 'sigma']
 	howToSave = 'mainProgenitor'
 	savedRedshifts = None
 

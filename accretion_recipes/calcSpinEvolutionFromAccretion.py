@@ -9,7 +9,6 @@ def calcSpinEvolutionFromAccretion(spin, m_ratio, spinMax=0.998):
 
 	spin = np.atleast_1d(spin).astype(float)
 	m_ratio = np.atleast_1d(m_ratio).astype(float)
-	alignment = np.atleast_1d(alignment).astype(int)
 
 	r_ISCO = calcISCO(spin)
 	newSpin = np.zeros_like(spin)
