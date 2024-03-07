@@ -63,8 +63,8 @@ class SAM(object):
 			print("Initializing storage arrays.")
 		self.initializeStorage(keepSpins=False)
 		
-		if not silent:
-			print("SAM initialized.")
+		#if not silent:
+		print("SAM initialized.")
 
 	def setParameters(self, parameters):
 		"""
@@ -246,10 +246,10 @@ class SAM(object):
 
 			#Simple, stupid model:  Every halo at some redshift above a nu-sigma cutoff gets a BH seed.
 			sigmaPeaks = sf.m2nu(self.m_halo[self.progToNode[potentialSeedIndices]], self.uniqueRedshift[self.step])
-			seedIndices = potentialSeedIndices[sigmaPeaks > self.seedingSigma].tolist()
+			seedIndices = potentialSeedIndices[sigmaPeaks > self.seedingSigma]
 
 			#Make sure you're not adding a PopIII seed to something that already has a DCBH seed.
-			realSeedIndices = filter(lambda prog: prog not in seededProgenitors, seedIndices)
+			realSeedIndices = seedIndices[~np.in1d(seedIndices, seededProgenitors)]
 			seededProgenitors.extend(realSeedIndices)
 			seedTypes.extend(['PopIII']*len(realSeedIndices))
 			if self.fixedSeedMass is not None:
@@ -477,8 +477,9 @@ class SAM(object):
 		if self.violentMergers:
 			#50% chance that disks of centrals flip.
 			matchedTargets, matchedBHs = self.findMatchingBlackHolesToProgenitor(targets)
-			toFlip = np.random.choice([True,False], size=len(matchedBHs))
-			self.spin_bh[matchedBHs][toFlip] *= -1
+			if len(matchedBHs) > 0:
+				toFlip = np.random.choice([True,False], size=len(matchedBHs))
+				self.spin_bh[matchedBHs][toFlip] *= -1
 
 	def M_bhSigma(self, progIndex):
 		"""
@@ -829,8 +830,7 @@ class SAM(object):
 
 		isFeeding = isRelevant & (self.feedTime <= time)
 		if np.any(isFeeding):
-			#relevantHalosOrBlackHoles.extend([[halo] for halo in np.where(isFeeding)])
-			relevantHalosOrBlackHoles.extend(np.where(isFeeding)[0])
+			relevantHalosOrBlackHoles.extend(np.transpose(np.vstack([np.where(isFeeding)[0], np.full(np.sum(isFeeding),0)])))
 			times.extend(self.feedTime[isFeeding])
 			types.extend(['feeding']*np.sum(isFeeding))
 
@@ -850,13 +850,14 @@ class SAM(object):
 		##FIND DISK FLIPS##
 		###################
 
-		#Unlike this other items, this one using the black hole index.
-		isFlipping = (self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0)
-		if np.any(isFlipping):
-			relevantHalosOrBlackHoles.extend(np.where(isFlipping)[0])
-			times.extend(self.scheduledFlipTime[isFlipping])
-			types.extend(['diskFlip']*np.sum(isFlipping))
-		
+		if self.spinEvolution:
+			#Unlike this other items, this one using the black hole index.
+			isFlipping = (self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0)
+			if np.any(isFlipping):
+				relevantHalosOrBlackHoles.extend(np.transpose(np.vstack([np.where(isFlipping)[0], np.full(np.sum(isFlipping),0)])))
+				times.extend(self.scheduledFlipTime[isFlipping])
+				types.extend(['diskFlip']*np.sum(isFlipping))
+			
 		###########################
 		##FIND BLACK HOLE MERGERS##
 		###########################
@@ -873,11 +874,24 @@ class SAM(object):
 				types.extend(['blackHoleMerger']*np.sum(isBHMerging))
 
 		#Wrap up, then order by time.
+		times = np.array(times)
+		relevantHalosOrBlackHoles = np.array(relevantHalosOrBlackHoles)
+		types = np.array(types)
 		if len(times) > 0:
-			eventOrder = np.argsort(times)
-			times = [times[i] for i in eventOrder]
-			relevantHalosOrBlackHoles = [relevantHalosOrBlackHoles[i] for i in eventOrder]
-			types = [types[i] for i in eventOrder]
+			#If multiple events occur at the same time, what order to we do them in?  It probably doesn't matter, but I've made a consistent choice here.
+			tieBreakers = np.zeros_like(times)
+			tieBreakers[types=='diskFlip'] = 0
+			tieBreakers[types=='blackHoleMerger'] = 1
+			tieBreakers[types=='haloMerger'] = 2
+			tieBreakers[types=='feeding'] = 3			
+
+			#Sort
+			arrayToSort = np.array(list(zip(times, tieBreakers)), dtype=[('times', float), ('tieBreakers', int)])
+			eventOrder = np.argsort(arrayToSort, order=['times', 'tieBreakers'])
+			times = times[eventOrder]
+			relevantHalosOrBlackHoles = relevantHalosOrBlackHoles[eventOrder]
+			types = types[eventOrder]
+
 		return times, relevantHalosOrBlackHoles, types
 
 	def resolveUniverseInterruption(self, time, relevantHaloOrBlackHole, eventType, integrateAll):
@@ -887,16 +901,22 @@ class SAM(object):
 
 		#Turn on BHs
 		if eventType == 'feeding':
+			#Note: for this event, several indices are allowed to pass in parallel to save time.
+			relevantHaloOrBlackHole = np.atleast_2d(relevantHaloOrBlackHole)
+
 			if self.supernovaBarrier:
 				#See if SN feedback prevents AGN from triggering.
 				Mcrit = sf.Mcrit(self.uniqueRedshift[self.step])
-				aboveSpecialHaloMass = self.m_halo[self.progToNode[relevantHaloOrBlackHole]] > Mcrit
-				if aboveSpecialHaloMass:
-					#Never mind.  
+				aboveSpecialHaloMass = self.m_halo[self.progToNode[relevantHaloOrBlackHole[:,0]]] > Mcrit
+				if np.any(aboveSpecialHaloMass):
+					relevantHaloOrBlackHole = relevantHaloOrBlackHole[aboveSpecialHaloMass,:]
+				else:
+					self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
+					#Never mind; we're done.
 					return
 
 			#Find corresponding central black holes, if they exist
-			matchedProgenitor, feedingHole = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole)
+			matchedProgenitor, feedingHole = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole[:,0])
 			if len(feedingHole) > 0:
 				self.integrateBHs(feedingHole, time, integrateAll)
 
@@ -911,9 +931,11 @@ class SAM(object):
 						self.eddRatio[feedingHole] = sf.draw_typeI(len(feedingHole), np.full(len(feedingHole), self.uniqueRedshift[self.step]))
 				else:
 					self.mode[feedingHole] = 'quasar'
-				if self.spinEvolution & (self.scheduledFlipTime[feedingHole] > 0) & (self.scheduledFlipTime[feedingHole] < np.inf):
-					self.scheduledFlipTime[feedingHole] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
-			self.feedTime[relevantHaloOrBlackHole] = np.inf
+				if self.spinEvolution:
+					#Schedule flips
+					toScheduleFlips = np.in1d(self.scheduledFlipTime[feedingHole], [0,np.inf])
+					self.scheduledFlipTime[feedingHole[toScheduleFlips]] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole[toScheduleFlips]], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
+			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
 		#Merge BHs
 		elif eventType == 'blackHoleMerger':
@@ -967,10 +989,10 @@ class SAM(object):
 
 		#Disk Flips
 		elif eventType == 'diskFlip':
-			self.integrateBHs(relevantHaloOrBlackHole, time, integrateAll)
+			self.integrateBHs(relevantHaloOrBlackHole[0], time, integrateAll)
 			#Flip the spin, then set the next flip.
-			self.spin_bh[relevantHaloOrBlackHole] *= -1
-			self.scheduledFlipTime[relevantHaloOrBlackHole] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[relevantHaloOrBlackHole], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
+			self.spin_bh[relevantHaloOrBlackHole[0]] *= -1
+			self.scheduledFlipTime[relevantHaloOrBlackHole[0]] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[relevantHaloOrBlackHole[0]], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
 
 	def evolveUniverse(self, outputNameBase=None, savedRedshifts=None, savedProperties=['m_bh', 'm_halo', 'redshift'], saveMode='progenitors'):
 		"""
@@ -1039,7 +1061,7 @@ class SAM(object):
 			#NOTE:  This is a place to make new accretion recipes! It may be as simple as just making a new bound method if you don't need extra infrastructure.
 
 			#Determine the accretion recipe we're currently using.
-			#TODO:  Make this cleaner
+			#TODO:  Make this cleaner.  Most of these are gone actually.
 			if self.uniqueRedshift[self.step] > self.z_superEdd:
 				integrateAll = self.integrateAll_superEdd
 			elif self.useColdReservoir & ~self.useMsigmaCap:
@@ -1081,13 +1103,28 @@ class SAM(object):
 				##INTEGRATE SUB-TIME STEP IN A QUEUE##
 				######################################
 
+				#Here, we iterate to make sure things happen in the right order.  Sometimes events cause other events, so we need to keep doing this on the fly.
+				queueTimes, queueIndices, queueTypes = self.findUniverseInterruptions(time)
+				queueCount = 0
 				while True:
-					#Here, we iterate to make sure things happen in the right order.  Sometimes events cause other events, so we need to keep doing this on the fly.
-					queueTimes, queueIndices, queueTypes = self.findUniverseInterruptions(time)
-					if len(queueTimes) == 0:
+					if len(queueTimes) == queueCount:
 						break
-					#Since interruptions can cause other interruptions, we only do the first, then regenerate the queue.
-					self.resolveUniverseInterruption(queueTimes[0], queueIndices[0], queueTypes[0], integrateAll)
+					#Since interruptions can cause other interruptions, we only do the first, then possibly regenerate the queue.
+					eventTime, eventIndices, eventType = queueTimes[queueCount], queueIndices[queueCount], queueTypes[queueCount]
+					if eventType == 'feeding':
+						#Simultaneous feeding events can be done in parallel to save time, since they are quite simple.
+						inParallel = (queueTimes[queueCount:] == eventTime) & (queueTypes[queueCount:] == 'feeding')
+						self.resolveUniverseInterruption(eventTime, queueIndices[queueCount:][inParallel], eventType, integrateAll)
+						chunkLength = np.sum(inParallel)
+					else:
+						self.resolveUniverseInterruption(eventTime, eventIndices, eventType, integrateAll)
+						chunkLength = 1
+					if (self.spinEvolution & (eventType == 'feeding')) | (self.useDelayTimes & (eventType == 'haloMerger')):
+						#Currently, these are the ones that put things in the queue.  In this case, it will need to be regenerated.
+						queueTimes, queueIndices, queueTypes = self.findUniverseInterruptions(time)
+						queueCount = 0
+					else:
+						queueCount += chunkLength
 
 				##########################################
 				##INTEGRATE ALL TIME-DEPENDENT EQUATIONS##

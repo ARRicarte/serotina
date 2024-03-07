@@ -245,14 +245,14 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 		gwe.plotEventRateByMass(gw_packs_m, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(3e2,1e6), output=outFolder+'gw_bym.pdf')
 		gwe.computeTotalEvents(gw_packs_m, yearsOfObservation=4)
 
-	#Bolometric luminosity functions
+	#Spins
 	if spinDistributions:
 		print("Spin")
 		redshiftSlices = [0.0, 2.0, 6.0]; xlim=(0,1); ylim=(0,1); figsize=(8,4)
-		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e6,1e7], show=False, output=outputFolder+'spin_6to7.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
-		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e7,1e8], show=False, output=outputFolder+'spin_7to8.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
-		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,1e9], show=False, output=outputFolder+'spin_8to9.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
-		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,np.inf], show=False, output=outputFolder+'spin_8toinf.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e6,1e7], show=False, output=outFolder+'spin_6to7.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e7,1e8], show=False, output=outFolder+'spin_7to8.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,1e9], show=False, output=outFolder+'spin_8to9.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
+		psd.plotSpinDistributionGrid(ensembles, listOfRedshifts=redshiftSlices, listOfLabels=labels, listOfColors=colors, Mbh_range=[1e8,np.inf], show=False, output=outFolder+'spin_8toinf.pdf', xlim=xlim, ylim=ylim, figsize=figsize)
 
 if __name__ == '__main__':
 
