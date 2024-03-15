@@ -167,8 +167,7 @@ class SAM(object):
 		#This special list is populated with M1, q, and z whenever a black hole merger occurs.
 		self.bh_mergers = np.empty((0,3))
 
-	def seed(self, relevantProgenitors, m_d=0.05, alpha_c=0.06, T_gas=5000, j_d=0.05, noProgenitor=False, \
-		noMergers=False):
+	def seed(self, relevantProgenitors, m_d=0.05, alpha_c=0.06, T_gas=5000, j_d=0.05, noProgenitor=False, noMergers=False):
 		"""
 		Seeding prescription.
 		"""
@@ -303,7 +302,13 @@ class SAM(object):
 			self.L_bol = np.concatenate((self.L_bol, np.zeros(n_new)))
 			self.lastIntegrationTime = np.concatenate((self.lastIntegrationTime, np.full(n_new,self.uniqueTime[self.step])))
 			self.scheduledMergeTime = np.concatenate((self.scheduledMergeTime, np.zeros(n_new)))
-			self.scheduledFlipTime = np.concatenate((self.scheduledFlipTime, np.zeros(n_new)))
+			if self.spinEvolution:
+				redshifts = self.redshift[self.progToNode[np.array(seededProgenitors)]]
+				times = cosmology_functions.z2t(redshifts)
+				newFlipTimes = times + sf.computeAccretionAlignmentFlipTime(np.array(seedMasses), redshifts, parameters=self.diskAlignmentParameters)
+				self.scheduledFlipTime = np.concatenate((self.scheduledFlipTime, newFlipTimes))
+			else:
+				self.scheduledFlipTime = np.concatenate((self.scheduledFlipTime, np.zeros(n_new)))
 		
 	def mergeBHs(self, primaries, secondaries, progenitors, times):
 		"""
@@ -936,10 +941,13 @@ class SAM(object):
 						self.eddRatio[feedingHole] = sf.draw_typeI(len(feedingHole), np.full(len(feedingHole), self.uniqueRedshift[self.step]))
 				else:
 					self.mode[feedingHole] = 'quasar'
+				'''
+				#Oops--failed to account for flips during steady mode.
 				if self.spinEvolution:
 					#Schedule flips
 					toScheduleFlips = self.scheduledFlipTime[feedingHole] == 0
 					self.scheduledFlipTime[feedingHole[toScheduleFlips]] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole[toScheduleFlips]], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
+				'''
 			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
 		#Merge BHs
