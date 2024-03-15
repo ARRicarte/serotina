@@ -222,6 +222,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 				#This is a folder leading to the ensembles themselves.  Compute from scratch.  This will take a while.
 				xaxis, distribution = computeSpinDistribution(grove, redshift, Mbh_range=Mbh_range, Mhalo_range=Mhalo_range, Mstar_range=Mstar_range, Lbol_range=Lbol_range, fEdd_range=fEdd_range, \
 				treeStartingRedshift=treeStartingRedshift, transformFunction=transformFunction, n_bootstrap=n_bootstrap, xaxis=xaxis)
+				distribution = distribution[0]
 			plotSpinDistribution(xaxis, distribution, fig_ax=(fig,ax), doFormatting=False, color=color, label=label, show=False)
 
 	for z_index in range(len(listOfRedshifts)):

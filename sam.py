@@ -85,7 +85,7 @@ class SAM(object):
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignmentParameters': [np.inf], 'MAD': False, 'violentMergers': False}
+		'diskAlignmentParameters': [np.inf], 'MAD': False, 'violentMergers': False, 'alwaysMergeEmpty': True}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -329,8 +329,10 @@ class SAM(object):
 				phi2 = np.full(npts, 0.0)
 
 		if self.spinEvolution:
+			#Note that only positive spins go into this formula.
+			signToPreserve = np.sign(self.spin_bh[primaries])
 			self.spin_bh[primaries] = bhb.calcRemnantSpin(self.m_bh[primaries], self.m_bh[secondaries], \
-			self.spin_bh[primaries], self.spin_bh[secondaries], \
+			np.abs(self.spin_bh[primaries]), np.abs(self.spin_bh[secondaries]), \
 			theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
 
 		#Save to a list of all merger events.
@@ -341,6 +343,9 @@ class SAM(object):
 		self.m_merged[primaries] += self.m_bh[secondaries]
 		self.seedType[primaries] = 'Merged'
 		self.bhToProg[primaries] = progenitors
+
+		#By default, maintain prograde or retrograde nature of the primary.  That means re-flip anything that was negative.
+		self.spin_bh[primaries][signToPreserve == -1] *= -1
 
 		if self.violentMergers:
 			#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
@@ -550,7 +555,7 @@ class SAM(object):
 			if self.steady == None:
 				if self.constant_f_min is None:
 					f_EddMin = np.zeros(sum(accreting))
-				elif self.constant_f_min > 0:
+				elif self.constant_f_min >= 0:
 					f_EddMin = np.full(sum(accreting), self.constant_f_min)
 			elif self.steady == 'PowerLaw':
 				f_EddMin = sf.draw_typeII(sum(accreting), redshifts[accreting], logBounds=(-4.0,0.0), slope0=-0.9)
@@ -577,7 +582,7 @@ class SAM(object):
 
 			#The actual integration step.
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
-			test = acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
+			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
 			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD=self.MAD)
 
@@ -933,7 +938,7 @@ class SAM(object):
 					self.mode[feedingHole] = 'quasar'
 				if self.spinEvolution:
 					#Schedule flips
-					toScheduleFlips = np.in1d(self.scheduledFlipTime[feedingHole], [0,np.inf])
+					toScheduleFlips = self.scheduledFlipTime[feedingHole] == 0
 					self.scheduledFlipTime[feedingHole[toScheduleFlips]] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole[toScheduleFlips]], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
 			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
@@ -976,8 +981,9 @@ class SAM(object):
 						stellarMassTarget = self.m_star[self.progToNode[bh_targets]]
 						computedMergerProbabilities = fabioMergerProbabilities(stellarMassTarget, stellarMassMerging/stellarMassTarget)
 						toMerge = np.random.random(len(bh_indices)) < computedMergerProbabilities
-					#Set the merger probability to 1 if the target doesn't currently have a black hole.  TODO:  Do we really want this?  Probably not; turned off.
-					#toMerge[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = True
+					if self.alwaysMergeEmpty:
+						#Set the merger probability to 1 if the target doesn't currently have a black hole.  This especially matters for DCBHs.  Is it a good assumption?
+						toMerge[~np.in1d(bh_targets, self.bhToProg[(~self.wandering) & (~self.merged_bh)])] = True
 					if np.any(toMerge):
 						self.transferBHs(bh_indices[toMerge], bh_targets[toMerge], np.full(np.sum(toMerge), time))
 					if np.any(~toMerge):
