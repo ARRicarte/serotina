@@ -81,7 +81,7 @@ class SAM(object):
 		parameterDefaults = {'seedingMode': 'dcbh', 'seedingEfficiency': 1.0, 'useDelayTimes': False, \
 		'majorMergerMassRatio': 0.1, 'constant_f_min': None, 'constant_f_max': None, 'z_superEdd': 30, 'howToSave': 'progenitors', \
 		'spinEvolution': False, 'MsigmaNormalization': 8.45, 'MsigmaSlope': 5.0, 'spinMax': 0.998, 'mergerKicks': False, 'fEdd_MyrPerDex': 10.0, \
-		'useMsigmaCap': True, 'fixedSeedMass': None, 'silent': False, 'randomFractionOn': 0.0, 'alignQuasarSpins': False, 'seedingSigma': 3.5, \
+		'useMsigmaCap': True, 'fixedSeedMass': None, 'silent': False, 'randomFractionOn': 0.0, 'alignMergerSpins': False, 'seedingSigma': 3.5, \
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
@@ -164,8 +164,8 @@ class SAM(object):
 		'seedTime', 't_decline', 't_fEdd', 'mode', 'accretionBudget', 'merged_bh', 'wandering', 'eddRatio', 'L_bol', 'lastIntegrationTime', \
 		'scheduledMergeTime', 'scheduledFlipTime']
 
-		#This special list is populated with M1, q, and z whenever a black hole merger occurs.
-		self.bh_mergers = np.empty((0,3))
+		#This special list is populated with M1, q, and z whenever a black hole merger occurs.  Remnant spin and chi_eff are also included if spin evolution is on.
+		self.bh_mergers = np.empty((0,5))
 
 	def seed(self, relevantProgenitors, m_d=0.05, alpha_c=0.06, T_gas=5000, j_d=0.05, noProgenitor=False, noMergers=False):
 		"""
@@ -318,30 +318,34 @@ class SAM(object):
 		npts = len(primaries)
 
 		if (self.mergerKicks) | (self.spinEvolution):
-			#Draw random spins here, to be self-consistent in both calculations.
 
-			theta1 = 2*np.pi*np.random.random(npts)
-			theta2 = 2*np.pi*np.random.random(npts)
-			phi1 = 2*np.pi*np.random.random(npts)
-			phi2 = 2*np.pi*np.random.random(npts)
-
-			if self.alignQuasarSpins:
-				onesToAlign = ((self.mode[primaries] == 'quasar') | (self.mode[secondaries] == 'quasar') | (self.accretionBudget[primaries] > 0))
-				#If the BH is currently a quasar, I assume that spins align.
+			if self.alignMergerSpins:
+				#One might expect this in gas rich environments, if the binaries shrunk in a gas disc.
 				theta1 = np.full(npts, 0.0)
 				theta2 = np.full(npts, 0.0)
 				phi1 = np.full(npts, 0.0)
 				phi2 = np.full(npts, 0.0)
+			else:
+				#One might expect this in gas poor environments.
+				theta1 = 2*np.pi*np.random.random(npts)
+				theta2 = 2*np.pi*np.random.random(npts)
+				phi1 = 2*np.pi*np.random.random(npts)
+				phi2 = 2*np.pi*np.random.random(npts)
 
 		if self.spinEvolution:
+			#Mass-weighted spin projected onto the binary axis, most easily accessed by GW detectors.
+			chi_eff = (self.m_bh[primaries] * np.abs(self.spin_bh[primaries]) * np.cos(theta1) + self.m_bh[secondaries] * np.abs(self.spin_bh[secondaries]) * np.cos(theta2)) / (self.m_bh[primaries] + self.m_bh[secondaries])
+
 			#Note that only positive spins go into this formula.
 			signToPreserve = np.sign(self.spin_bh[primaries])
 			self.spin_bh[primaries] = bhb.calcRemnantSpin(self.m_bh[primaries], self.m_bh[secondaries], \
 			np.abs(self.spin_bh[primaries]), np.abs(self.spin_bh[secondaries]), \
 			theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
-
+		else:
+			chi_eff = np.zeros(npts, dtype=float)
+		
 		#Save to a list of all merger events.
-		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times)]).transpose()))
+		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff]).transpose()))
 
 		#Simply adding the two masses together.
 		self.m_bh[primaries] += self.m_bh[secondaries]
@@ -349,13 +353,14 @@ class SAM(object):
 		self.seedType[primaries] = 'Merged'
 		self.bhToProg[primaries] = progenitors
 
-		#By default, maintain prograde or retrograde nature of the primary.  That means re-flip anything that was negative.
-		self.spin_bh[primaries][signToPreserve == -1] *= -1
+		if self.spinEvolution:
+			#By default, maintain prograde or retrograde nature of the primary.  That means re-flip anything that was negative.
+			self.spin_bh[primaries][signToPreserve == -1] *= -1
 
-		if self.violentMergers:
-			#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
-			flipping = np.random.choice([True,False], size=len(primaries))
-			self.spin_bh[primaries][flipping] *= -1
+			if self.violentMergers:
+				#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
+				flipping = np.random.choice([True,False], size=len(primaries))
+				self.spin_bh[primaries][flipping] *= -1
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
@@ -941,13 +946,6 @@ class SAM(object):
 						self.eddRatio[feedingHole] = sf.draw_typeI(len(feedingHole), np.full(len(feedingHole), self.uniqueRedshift[self.step]))
 				else:
 					self.mode[feedingHole] = 'quasar'
-				'''
-				#Oops--failed to account for flips during steady mode.
-				if self.spinEvolution:
-					#Schedule flips
-					toScheduleFlips = self.scheduledFlipTime[feedingHole] == 0
-					self.scheduledFlipTime[feedingHole[toScheduleFlips]] = time + sf.computeAccretionAlignmentFlipTime(self.m_bh[feedingHole[toScheduleFlips]], cosmology_functions.t2z(time), parameters=self.diskAlignmentParameters)
-				'''
 			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
 		#Merge BHs

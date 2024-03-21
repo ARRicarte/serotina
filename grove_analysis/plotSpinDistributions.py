@@ -168,7 +168,10 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 	else:
 		fig, ax = plt.subplots(1, 1, figsize=figsize)
 
-	ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
+	if len(probabilityDistribution.shape) == 2:
+		ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
+	elif len(probabilityDistribution.shape) == 1:
+		ax.plot(xaxis, probabilityDistribution, lw=2, color=color, label=label)
 
 	if doFormatting:
 		if label is not None:
@@ -186,7 +189,7 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 
 def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=None, listOfColors=None, figsize=(8,4), xaxis=np.linspace(0,1,1000), figshape=None, show=True, output=None, \
 	Mbh_range=[0,np.inf], Mhalo_range=[0,np.inf], Mstar_range=[0,np.inf], Lbol_range=[0,np.inf], fEdd_range=[0,np.inf], treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, \
-	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="Probability", fontsize=11):
+	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="$P/P_\mathrm{max}$", fontsize=11):
 
 	if figshape is None:
 		figshape = (1, len(listOfRedshifts))
@@ -231,6 +234,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 		ax.set_xlim(xlim)
 		ax.set_ylim(ylim)
 		ax.set_xlabel(xlabel, fontsize=fontsize)
+		ax.plot([0,0], [0,1], lw=1, ls=':', zorder=-1, color='k')
 		if z_index == 0:
 			ax.set_ylabel(ylabel, fontsize=fontsize)
 			if listOfLabels is not None:
