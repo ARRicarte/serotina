@@ -867,7 +867,7 @@ class SAM(object):
 
 		if self.spinEvolution:
 			#Unlike this other items, this one using the black hole index.
-			isFlipping = (self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0)
+			isFlipping = (self.scheduledFlipTime <= time) & (self.scheduledFlipTime > 0) & (self.spin_bh != 0)
 			if np.any(isFlipping):
 				relevantHalosOrBlackHoles.extend(np.transpose(np.vstack([np.where(isFlipping)[0], np.full(np.sum(isFlipping),0)])))
 				times.extend(self.scheduledFlipTime[isFlipping])
@@ -1131,8 +1131,9 @@ class SAM(object):
 					else:
 						self.resolveUniverseInterruption(eventTime, eventIndices, eventType, integrateAll)
 						chunkLength = 1
-					if (self.spinEvolution & (eventType == 'feeding')) | (self.useDelayTimes & (eventType == 'haloMerger')):
+					if (self.spinEvolution & (eventType == 'feeding')) | (self.useDelayTimes & (eventType == 'haloMerger')) | (self.spinEvolution & (eventType == 'diskFlip')):
 						#Currently, these are the ones that put things in the queue.  In this case, it will need to be regenerated.
+						#Note: rapid disk flips can cause arbitrary slowness.
 						queueTimes, queueIndices, queueTypes = self.findUniverseInterruptions(time)
 						queueCount = 0
 					else:

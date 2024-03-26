@@ -167,8 +167,8 @@ class SAM_Analysis(object):
 
 		fig, ax = plt.subplots(1, figsize=(7,6))
 		plt.clf()
-		plt.xlabel(r'$\log(\sigma \, [\mathrm{km \, s^{-1}}])$', fontsize=16)
-		plt.ylabel(r'$\log(M_\mathrm{BH} \, [\mathrm{M}_\odot])$', fontsize=16)
+		plt.xlabel(r'$\sigma \, [\mathrm{km \, s^{-1}}]$', fontsize=16)
+		plt.ylabel(r'$M_\mathrm{BH} \, [\mathrm{M}_\odot]$', fontsize=16)
 		plt.xscale('log')
 		plt.yscale('log')
 		plt.xlim(xlim)
@@ -212,9 +212,9 @@ class SAM_Analysis(object):
 				cb = plt.colorbar(sm, ticks=lrange)
 				cb.set_label(r'$\log(L_\mathrm{Bol}/L_\odot)$', fontsize=14)
 		elif colorMode == 'spin':
-			arange = (0,1)
+			arange = (-1,1)
 			if showBar:
-				sm = plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('jet_r'), norm=plt.Normalize(vmin=arange[0], vmax=arange[1]))
+				sm = plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('turbo'), norm=plt.Normalize(vmin=arange[0], vmax=arange[1]))
 				sm._A = []
 				cb = plt.colorbar(sm, ticks=arange)
 				cb.set_label(r'$a$', fontsize=14)
@@ -257,8 +257,8 @@ class SAM_Analysis(object):
 				s_colors = plt.cm.jet_r((np.log10(lbolcut[stars])-lrange[0])/(lrange[1]-lrange[0]))
 			elif colorMode == 'spin':
 				#Color code by dimensionless BH spin
-				e_colors = plt.cm.jet_r((acut[circles])-arange[0])/(arange[1]-arange[0])
-				s_colors = plt.cm.jet_r((acut[stars])-arange[0])/(arange[1]-arange[0])	
+				e_colors = plt.cm.turbo((acut[circles]-arange[0])/(arange[1]-arange[0]))
+				s_colors = plt.cm.turbo((acut[stars]-arange[0])/(arange[1]-arange[0]))	
 
 			#Create collections.
 			if len(circles) > 0:
@@ -272,7 +272,7 @@ class SAM_Analysis(object):
 				if colorMode != 'spin':
 					s_colors[eddRatiocut[stars]==0] = [0,0,0,1]
 				starPoints = plt.scatter(sigmacut[stars], m_bhcut[stars], marker='*',\
-				color=s_colors, alpha=alphaScatter, s=100, zorder=4)
+				color=s_colors, alpha=alphaScatter, s=100, zorder=4, edgecolors=['k']*len(stars))
 			else:
 				starPoints = None
 
