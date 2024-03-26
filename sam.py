@@ -327,8 +327,8 @@ class SAM(object):
 				phi2 = np.full(npts, 0.0)
 			else:
 				#One might expect this in gas poor environments.
-				theta1 = 2*np.pi*np.random.random(npts)
-				theta2 = 2*np.pi*np.random.random(npts)
+				theta1 = np.pi*np.random.random(npts)
+				theta2 = np.pi*np.random.random(npts)
 				phi1 = 2*np.pi*np.random.random(npts)
 				phi2 = 2*np.pi*np.random.random(npts)
 
