@@ -360,7 +360,7 @@ class SAM(object):
 			if self.violentMergers:
 				#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
 				flipping = np.random.choice([True,False], size=len(primaries))
-				self.spin_bh[primaries][flipping] *= -1
+				self.spin_bh[primaries] = self.spin_bh[primaries] * np.random.choice([1,-1], size=len(primaries))
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
@@ -493,8 +493,7 @@ class SAM(object):
 			#50% chance that disks of centrals flip.
 			matchedTargets, matchedBHs = self.findMatchingBlackHolesToProgenitor(targets)
 			if len(matchedBHs) > 0:
-				toFlip = np.random.choice([True,False], size=len(matchedBHs))
-				self.spin_bh[matchedBHs][toFlip] *= -1
+				self.spin_bh[matchedBHs] = self.spin_bh[matchedBHs] * np.random.choice([1,-1], size=len(matchedBHs))
 
 	def M_bhSigma(self, progIndex):
 		"""

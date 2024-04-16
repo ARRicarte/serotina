@@ -151,13 +151,50 @@ class SAM_Analysis(object):
 			plt.legend(loc=3, frameon=False)
 		plt.show()
 
-	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6)):
+	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6), thinRegime=(3e-2,1)):
 
 		"""
 		Plot the evolution of a SAM's parts as a function of redshift.
 		"""
 
-		fig, axarr = plt.subplots(1, 3, figsize=figsize)
+		fig, axarr = plt.subplots(3, 1, figsize=figsize, sharex=True)
+
+		if plotTime:
+			xaxis = self.time
+			xlabel = r'$t_\mathrm{ABB} \, (\mathrm{Gyr})$'
+		else:
+			xaxis = self.redshift
+			xlabel = r'$z$'
+
+		#Indices of the main black hole
+		mainBH_indices, mainBH_exists = self.traceBH(self.bh_id[-1][0])
+
+		#Plot Main Progenitor Mass
+		maxis = np.array([self.m_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
+		axarr[0].semilogy(xaxis[mainBH_exists], maxis[mainBH_exists], linewidth=2, label="Mass", linestyle='-', color='k')
+		axarr[0].set_ylabel(r'$M_\bullet \ [M_\odot]$', fontsize=12)
+		axarr[0].set_ylim(1e2,1e10)
+		axarr[0].set_xlim(xaxis[-1], xaxis[0])
+
+		#Plot Main Progenitor Spin
+		aaxis = np.array([self.spin_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
+		axarr[1].plot(xaxis[mainBH_exists], aaxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='r')
+		axarr[1].set_ylabel(r'$a_\bullet$', fontsize=12)
+		axarr[1].plot([xaxis[-1], xaxis[0]], [0]*2, ls=':', lw=1, zorder=-1, color='r')
+		axarr[1].set_ylim(-1,1)
+
+		#Plot Eddington Ratio
+		faxis = np.array([self.eddRatio[i][mainBH_indices[i]] for i in range(len(self.time))])
+		axarr[2].semilogy(xaxis[mainBH_exists], faxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='b')
+		axarr[2].set_ylabel(r'$f_\mathrm{Edd}$', fontsize=12)
+		axarr[2].set_ylim(1e-5,10)
+		axarr[2].set_xlabel(xlabel, fontsize=12, color='k')
+		axarr[2].fill_between([xaxis[-1],xaxis[0]], [thinRegime[0]]*2, [thinRegime[1]]*2, zorder=-1, alpha=0.3, color='k')
+
+		fig.gca().invert_xaxis()
+		fig.tight_layout()
+		fig.subplots_adjust(hspace=0.1)
+		fig.show()
 
 	def plotEvolution(self, mp4name, colorMode='eddingtonRatio', shapeMode='satellites', plotData=False, alphaBeta=(8.22,4.58), \
 		showBar=True, alphaScatter=0.7, relationLabel='Feedback Limit', framerate=10, xlim=(3,5e2), ylim=(1e2,1e11), textloc=(4.0e0,1e10), \
