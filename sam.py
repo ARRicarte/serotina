@@ -489,12 +489,6 @@ class SAM(object):
 		#If this had any satellites and black holes, give them to the new targets.
 		self.transferSatellitesAndHoles(indices, targets)
 
-		if self.violentMergers:
-			#50% chance that disks of centrals flip.
-			matchedTargets, matchedBHs = self.findMatchingBlackHolesToProgenitor(targets)
-			if len(matchedBHs) > 0:
-				self.spin_bh[matchedBHs] = self.spin_bh[matchedBHs] * np.random.choice([1,-1], size=len(matchedBHs))
-
 	def M_bhSigma(self, progIndex):
 		"""
 		The default limit comes from momentum-driven winds and an isothermal sphere.
