@@ -95,12 +95,12 @@ class SAM_Analysis(object):
 			plt.legend(loc=3, frameon=False)
 		plt.show()
 
-	def plotGrowthHistory(self, plotTime=False, showLegend=False, depth=0, alphaBeta=(8.22,4.58), plotSpin=True):
+	def plotGrowthHistory_old(self, plotTime=False, showLegend=False, depth=0, alphaBeta=(8.22,4.58), plotSpin=True):
 		"""
 		Plot the evolution of a SAM's parts as a function of redshift.
 		"""
 
-		fig, ax1 = plt.subplots()
+		fig, ax1 = plt.subplots(1, 1, figsize=(8,5))
 		if plotTime:
 			xaxis = self.time
 			xlabel = r'$t_\mathrm{ABB} \, (\mathrm{Gyr})$'
@@ -114,21 +114,23 @@ class SAM_Analysis(object):
 		#Plot Main Progenitor Mass
 		maxis = np.array([self.m_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
 		ax1.semilogy(xaxis[mainBH_exists], maxis[mainBH_exists], linewidth=2, label="Mass", linestyle='-', color='k')
-		maxis_expect = sf.v2M_BH(np.array([self.v_c[i][mainBH_indices[i]] for i in range(len(self.time))]), alphaBeta=alphaBeta)
-		ax1.semilogy(xaxis[mainBH_exists], maxis_expect[mainBH_exists], linewidth=2, label="Expectation", linestyle='-', color='slategrey')
-		ax1.set_xlabel(xlabel, fontsize=18, color='k')
-		ax1.set_ylabel(r'$M_\mathrm{BH} \, (M_\odot)$', fontsize=18)
+		#maxis_expect = sf.v2M_BH(np.array([self.v_c[i][mainBH_indices[i]] for i in range(len(self.time))]), alphaBeta=alphaBeta)
+		#ax1.semilogy(xaxis[mainBH_exists], maxis_expect[mainBH_exists], linewidth=2, label="Expectation", linestyle='-', color='slategrey')
+		ax1.set_xlabel(xlabel, fontsize=14, color='k')
+		ax1.set_ylabel(r'$M_\bullet \ [M_\odot]$', fontsize=14)
 		ax1.set_ylim(1e2,1e10)
+		ax1.set_xlim(xaxis[-1], xaxis[0])
 
 		#Plot Main Progenitor Spin
 		if plotSpin:
 			ax2 = ax1.twinx()
 			aaxis = np.array([self.spin_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
 			ax2.plot(xaxis[mainBH_exists], aaxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='r')
-			ax2.set_ylabel(r'$a$', fontsize=18, color='r')
+			ax2.set_ylabel(r'$a_\bullet$', fontsize=14, color='r')
+			ax2.plot([xaxis[-1], xaxis[0]], [0]*2, ls=':', lw=1, zorder=-1, color='r')
 			for tl in ax2.get_yticklabels():
 				tl.set_color('r')
-			ax2.set_ylim(0,1)
+			ax2.set_ylim(-1,1)
 
 		#Add some satellites.  depth is the number of levels in the tree you go back to acquire satellites.
 		if depth > 0:
@@ -137,16 +139,25 @@ class SAM_Analysis(object):
 				otherBH_indices, otherBH_exists = self.traceBH(bh)
 				maxis = np.array([self.m_bh[i][otherBH_indices[i]] for i in range(len(self.time))])
 				ax1.semilogy(xaxis[otherBH_exists], maxis[otherBH_exists], linewidth=1, linestyle='--', color='k')
-				maxis_expect = sf.v2M_BH(np.array([self.v_c[i][otherBH_indices[i]] for i in range(len(self.time))]), alphaBeta=alphaBeta)
-				ax1.semilogy(xaxis[otherBH_exists], maxis_expect[otherBH_exists], linewidth=1, linestyle='--', color='slategrey')
+				#maxis_expect = sf.v2M_BH(np.array([self.v_c[i][otherBH_indices[i]] for i in range(len(self.time))]), alphaBeta=alphaBeta)
+				#ax1.semilogy(xaxis[otherBH_exists], maxis_expect[otherBH_exists], linewidth=1, linestyle='--', color='slategrey')
 				if plotSpin:
 					aaxis = np.array([self.spin_bh[i][otherBH_indices[i]] for i in range(len(self.time))])
 					ax2.plot(xaxis[otherBH_exists], aaxis[otherBH_exists], linewidth=1, linestyle='--', color='r')
 
 		plt.gca().invert_xaxis()
+		plt.tight_layout()
 		if showLegend:
 			plt.legend(loc=3, frameon=False)
 		plt.show()
+
+	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6)):
+
+		"""
+		Plot the evolution of a SAM's parts as a function of redshift.
+		"""
+
+		fig, axarr = plt.subplots(1, 3, figsize=figsize)
 
 	def plotEvolution(self, mp4name, colorMode='eddingtonRatio', shapeMode='satellites', plotData=False, alphaBeta=(8.22,4.58), \
 		showBar=True, alphaScatter=0.7, relationLabel='Feedback Limit', framerate=10, xlim=(3,5e2), ylim=(1e2,1e11), textloc=(4.0e0,1e10), \

@@ -50,6 +50,8 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
+		if integrator.time[integrator.currentIndex] < timeStep[index]*1e9:
+			raise ValueError("RK45 integrator reached maximum step.")
 		newMass[index] = integrator.mass[integrator.currentIndex]
 		newSpin[index] = integrator.spin[integrator.currentIndex]
 		luminosity[index] = f_Edd[index] * newMass[index]

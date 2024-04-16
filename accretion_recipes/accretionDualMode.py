@@ -74,7 +74,7 @@ def accretionDualMode(mass, spin, timeStep, time, f_EddBurst, f_EddSteady, f_Edd
 		timeAsSteady[hasSteadyTime] = np.minimum(np.log(maxSteadyMass[hasSteadyTime]/mass[hasSteadyTime]) / f_EddSteady[hasSteadyTime] * t_Edd / (1.0-steadyRadiativeEfficiencies) * steadyRadiativeEfficiencies, timeStep[hasSteadyTime]-timeAsQuasar[hasSteadyTime])
 
 		if MAD:
-			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], \
+			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion_MAD(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], \
 			includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax)
 		else:
 			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime] = integrateAccretion(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeAsSteady[hasSteadyTime], \
