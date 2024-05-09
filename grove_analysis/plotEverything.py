@@ -234,15 +234,19 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 		print("Black hole mergers")
 		gw_packs_z = []
 		gw_packs_m = []
+		gw_packs_a = []
+		gw_packs_chi = []
 		for e_index in range(len(ensembles)):
 			calculator = gwe.GravitationalWaveEventCalculator(ensembles[e_index], logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample)
 			calculator.evaluateSignalToNoise()
 			gw_packs_z.append(calculator.computeEventRateByRedshift(chirpMassLimits=(0,np.inf)))
 			gw_packs_m.append(calculator.computeEventRateByMass())
-		#gwe.plotEventRateByRedshift(gw_packs_z, colors, labels, yearsOfObservation=4, ylim=(1e-1,5e1), xlim=(0,20), output=outFolder+'gw_byz.pdf')
-		#gwe.plotEventRateByMass(gw_packs_m, colors, labels, yearsOfObservation=4, ylim=(1e-1,5e1), xlim=(3e2,1e6), output=outFolder+'gw_bym.pdf')
+			gw_packs_a.append(calculator.computeEventRateBySpin())
+			gw_packs_chi.append(calculator.computeEventRateByChiEff())
 		gwe.plotEventRateByRedshift(gw_packs_z, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(0,20), output=outFolder+'gw_byz.pdf')
 		gwe.plotEventRateByMass(gw_packs_m, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(3e2,1e6), output=outFolder+'gw_bym.pdf')
+		gwe.plotEventRateBySpin(gw_packs_a, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(0,1), output=outFolder+'gw_bya.pdf')
+		gwe.plotEventRateByChiEff(gw_packs_chi, colors, labels, yearsOfObservation=4, ylim=(1e0,5e2), xlim=(-1,1), output=outFolder+'gw_bychi.pdf')
 		gwe.computeTotalEvents(gw_packs_m, yearsOfObservation=4)
 
 	#Spins

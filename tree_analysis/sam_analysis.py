@@ -103,7 +103,7 @@ class SAM_Analysis(object):
 		fig, ax1 = plt.subplots(1, 1, figsize=(8,5))
 		if plotTime:
 			xaxis = self.time
-			xlabel = r'$t_\mathrm{ABB} \, (\mathrm{Gyr})$'
+			xlabel = r'$t_\mathrm{ABB} \ [\mathrm{Gyr}]$'
 		else:
 			xaxis = self.redshift
 			xlabel = r'$z$'
@@ -151,20 +151,26 @@ class SAM_Analysis(object):
 			plt.legend(loc=3, frameon=False)
 		plt.show()
 
-	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6), thinRegime=(3e-2,1)):
+	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6), thinRegime=(3e-2,1), ylim1=(1e2,1e10), ylim2=(-1,1), ylim3=(1e-5,10), altLabels=None, xlim=None):
 
 		"""
-		Plot the evolution of a SAM's parts as a function of redshift.
+		Plot the evolution of the main progenitor's black hole as a function of redshift.
 		"""
 
 		fig, axarr = plt.subplots(3, 1, figsize=figsize, sharex=True)
 
 		if plotTime:
 			xaxis = self.time
-			xlabel = r'$t_\mathrm{ABB} \, (\mathrm{Gyr})$'
+			xaxis_twin = self.redshift
+			xlabel = r'$t_\mathrm{ABB} \ [\mathrm{Gyr}]$'
+			if xlim is None:
+				xlim = (0,14)
 		else:
 			xaxis = self.redshift
+			xaxis_twin = self.time
 			xlabel = r'$z$'
+			if xlim is None:
+				xlim = (self.redshift[0], self.redshift[-1])
 
 		#Indices of the main black hole
 		mainBH_indices, mainBH_exists = self.traceBH(self.bh_id[-1][0])
@@ -173,25 +179,42 @@ class SAM_Analysis(object):
 		maxis = np.array([self.m_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
 		axarr[0].semilogy(xaxis[mainBH_exists], maxis[mainBH_exists], linewidth=2, label="Mass", linestyle='-', color='k')
 		axarr[0].set_ylabel(r'$M_\bullet \ [M_\odot]$', fontsize=12)
-		axarr[0].set_ylim(1e2,1e10)
-		axarr[0].set_xlim(xaxis[-1], xaxis[0])
+		axarr[0].set_ylim(ylim1)
+		axarr[0].set_xlim(xlim)
 
 		#Plot Main Progenitor Spin
 		aaxis = np.array([self.spin_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
 		axarr[1].plot(xaxis[mainBH_exists], aaxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='r')
 		axarr[1].set_ylabel(r'$a_\bullet$', fontsize=12)
-		axarr[1].plot([xaxis[-1], xaxis[0]], [0]*2, ls=':', lw=1, zorder=-1, color='r')
-		axarr[1].set_ylim(-1,1)
+		axarr[1].plot(xlim, [0]*2, ls=':', lw=1, zorder=-1, color='k')
+		axarr[1].set_ylim(ylim2)
 
 		#Plot Eddington Ratio
 		faxis = np.array([self.eddRatio[i][mainBH_indices[i]] for i in range(len(self.time))])
 		axarr[2].semilogy(xaxis[mainBH_exists], faxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='b')
 		axarr[2].set_ylabel(r'$f_\mathrm{Edd}$', fontsize=12)
-		axarr[2].set_ylim(1e-5,10)
+		axarr[2].set_ylim(ylim3)
 		axarr[2].set_xlabel(xlabel, fontsize=12, color='k')
-		axarr[2].fill_between([xaxis[-1],xaxis[0]], [thinRegime[0]]*2, [thinRegime[1]]*2, zorder=-1, alpha=0.3, color='k')
+		axarr[2].fill_between(xlim, [thinRegime[0]]*2, [thinRegime[1]]*2, zorder=-1, alpha=0.3, color='k')
 
-		fig.gca().invert_xaxis()
+		#This is for plotting the alternate xaxis on top.
+		ax_twin = axarr[0].twiny()
+		ax_twin.set_xlim(axarr[0].get_xlim())
+		if plotTime:
+			if altLabels is None:
+				altLabels = [0,0.5,1,2,4,6,10]
+			t_marked = np.interp(altLabels, np.flipud(self.redshift), np.flipud(self.time))
+			ax_twin.set_xticks(t_marked)
+			ax_twin.set_xticklabels([str(z) for z in altLabels])
+			ax_twin.set_xlabel('z', fontsize=12)
+		else:
+			if altLabels is None:
+				altLabels = [0.1,1,5,13.8]
+			z_marked = np.interp(altLabels, self.time, self.redshift)
+			ax_twin.set_xticks(z_marked)
+			ax_twin.set_xticklabels([str(t) for t in altLabels])
+			ax_twin.set_xlabel(r'$t_\mathrm{ABB} \ [\mathrm{Gyr}]$', fontsize=12)
+
 		fig.tight_layout()
 		fig.subplots_adjust(hspace=0.1)
 		fig.show()

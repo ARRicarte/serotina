@@ -46,6 +46,8 @@ class GravitationalWaveEventCalculator(object):
 		self.masses = np.array([])
 		self.redshifts = np.array([])
 		self.massRatios = np.array([])
+		self.spins = np.array([])
+		self.chiEff = np.array([])
 		self.numberDensities = np.array([])
 		self.treeIndices = np.array([])
 		self.hostMassesAtZero = np.array([])
@@ -65,6 +67,9 @@ class GravitationalWaveEventCalculator(object):
 					self.masses = np.concatenate((self.masses, tree[:,0]))
 					self.massRatios = np.concatenate((self.massRatios, tree[:,1]))
 					self.redshifts = np.concatenate((self.redshifts, tree[:,2]))
+					self.remnantSpins = np.concatenate((self.spins, tree[:,3]))
+					self.chiEff = np.concatenate((self.chiEff, tree[:,4]))
+					self.spins = np.concatenate((self.spins, tree[:,5]))
 					#Don't forget to get rid of little h.
 					self.numberDensities = np.concatenate((self.numberDensities, np.full(tree.shape[0], sf.calcHaloNumberDensity(hostHaloMass, hostRedshift) / self.n_sample / samplingFactor * cosmology.h**3)))
 					self.treeIndices = np.concatenate((self.treeIndices, np.full(tree.shape[0], treeIndex)))
@@ -153,7 +158,7 @@ class GravitationalWaveEventCalculator(object):
 		self.signalToNoiseArray = isn.interpSignalToNoise(self.masses, self.massRatios, usedRedshifts)
 		self.observability = self.signalToNoiseArray > sigmaThreshold
 
-	def computeEventRate(self, chirpMassLimits=(0,np.inf), ratioLimits=(0,1), redshiftLimits=(0,np.inf), n_bootstrap=10000, percentiles=(14,86), \
+	def computeEventRate(self, chirpMassLimits=(0,np.inf), ratioLimits=(0,1), redshiftLimits=(0,np.inf), spinLimits=(0,1), remnantSpinLimits=(0,1), chiEffLimits=(-1,1), n_bootstrap=10000, percentiles=(14,86), \
 		weightByObservability=True, hostMassAtZero=None):
 
 		"""
@@ -164,7 +169,10 @@ class GravitationalWaveEventCalculator(object):
 		massCut = (self.chirpMasses >= chirpMassLimits[0]) & (self.chirpMasses <= chirpMassLimits[1])
 		ratioCut = (self.massRatios >= ratioLimits[0]) & (self.massRatios <= ratioLimits[1])
 		redshiftCut = (self.redshifts >= redshiftLimits[0]) & (self.redshifts <= redshiftLimits[1])
-		combinedCut = massCut & ratioCut & redshiftCut
+		spinCut = (self.spins >= spinLimits[0]) & (self.spins <= spinLimits[1])
+		remnantSpinCut = (self.remnantSpins >= remnantSpinLimits[0]) & (self.remnantSpins <= remnantSpinLimits[1])
+		chiEffCut = (self.chiEff >= chiEffLimits[0]) & (self.chiEff <= chiEffLimits[1])
+		combinedCut = massCut & ratioCut & redshiftCut & spinCut & remnantSpinCut & chiEffCut
 
 		if hostMassAtZero is not None:
 			uniqueHostMasses = np.unique(self.hostMassesAtZero)
@@ -215,6 +223,30 @@ class GravitationalWaveEventCalculator(object):
 			output[m_index,:] = self.computeEventRate(hostMassAtZero=hostMasses[m_index], weightByObservability=weightByObservability)
 
 		return hostMasses, output
+
+    def computeEventRateByRemnantSpin(self, remnantSpinBins=np.linspace(0,1,21), weightByObservability=True):
+
+        output = np.zeros((len(spinBins)-1,2))
+        for a_index in range(len(spinBins)-1):
+            output[a_index,:] = self.computeEventRate(remnantSpinLimits=(remnantSpinBins[a_index],remnantSpinBins[a_index+1]), weightByObservability=weightByObservability)
+
+        return spinBins, output
+
+	def computeEventRateBySpin(self, spinBins=np.linspace(0,1,21), weightByObservability=True):
+
+		output = np.zeros((len(spinBins)-1,2))
+		for a_index in range(len(spinBins)-1):
+			output[a_index,:] = self.computeEventRate(spinLimits=(spinBins[a_index],spinBins[a_index+1]), weightByObservability=weightByObservability)
+
+		return spinBins, output
+
+	def computeEventRateByChiEff(self, chiBins=np.linspace(-1,1,21), weightByObservability=True):
+
+		output = np.zeros((len(chiBins)-1,2))
+		for a_index in range(len(chiBins)-1):
+			output[a_index,:] = self.computeEventRate(chiEffLimits=(chiBins[a_index],chiBins[a_index+1]), weightByObservability=weightByObservability)
+
+		return chiBins, output
 
 def plotEventRateByRedshift(gw_packs, colors, labels, figsize=(4,4), yearsOfObservation=None, yscale='log', xlim=(0,20), \
 	ylim=(1e-2,1e2), output=None, mode='fill'):
@@ -284,13 +316,13 @@ def plotEventRateByMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObservat
 		histoList[histoList == 0] = 1e-99
 
 		if yearsOfObservation is not None:
-				histoList = histoList * yearsOfObservation
+			histoList = histoList * yearsOfObservation
 		if mode == 'fill':
 			ax.fill_between(10**(0.5*(logMbinList[1:]+logMbinList[:-1])), histoList[:,0], histoList[:,1], color=colors[e_index], alpha=0.7)
 		elif mode == 'boxes':
 			for m_index in range(len(mbinList)-1):
-					ax.add_patch(patches.Rectangle((mbinList[m_index], histoList[m_index,0]), (mbinList[m_index+1]-mbinList[m_index]), \
-					(histoList[m_index,1]-histoList[m_index,0]), color=colors[e_index], alpha=0.7))
+				ax.add_patch(patches.Rectangle((mbinList[m_index], histoList[m_index,0]), (mbinList[m_index+1]-mbinList[m_index]), \
+				(histoList[m_index,1]-histoList[m_index,0]), color=colors[e_index], alpha=0.7))
 		ax.fill_between([], [], [], color=colors[e_index], label=labels[e_index], alpha=0.7)
 
 	ax.plot(xlim, [1,1], ls='--', lw=1, color='k', zorder=0)
@@ -301,6 +333,96 @@ def plotEventRateByMass(gw_packs, colors, labels, figsize=(4,4), yearsOfObservat
 	ax.set_xlabel(r"$M_\mathrm{chirp} \ [\mathrm{M}_\odot]$", fontsize=13)
 	ax.set_ylabel(ylabel, fontsize=13)
 	ax.set_xscale('log')
+	ax.set_yscale(yscale)
+	fig.tight_layout()
+	if output is None:
+		fig.show()
+	else:
+		fig.savefig(output)
+
+def plotEventRateBySpin(gw_packs, colors, labels, figsize=(4,4), yearsOfObservation=None, yscale='log', xlim=(0,1), \
+	ylim=(1e-3,1e2), output=None, mode='fill'):
+
+	fig, ax = plt.subplots(figsize=figsize)
+
+	if yearsOfObservation == None:
+		ylabel = '$d^2N/d\log M_\mathrm{chirp} dt \ [\mathrm{yr}^{-1}$]'
+	else:
+		ylabel = "Events After {0} Years".format(yearsOfObservation)
+
+	for e_index in range(len(gw_packs)):
+		abinList, histoList = gw_packs[e_index]
+		abinList = np.array(abinList)
+		histoList = np.array(histoList)
+		if yearsOfObservation == None:
+			spinBinSizes = np.diff(abinList)
+			histoList /= spinBinSizes[0]
+
+		#This line fixes a bug in matplotlib for fill_between and log scaling.
+		histoList[histoList == 0] = 1e-99
+
+		if yearsOfObservation is not None:
+			histoList = histoList * yearsOfObservation
+		if mode == 'fill':
+			ax.fill_between(0.5*(abinList[1:]+abinList[:-1]), histoList[:,0], histoList[:,1], color=colors[e_index], alpha=0.7)
+		elif mode == 'boxes':
+			for a_index in range(len(abinList)-1):
+				ax.add_patch(patches.Rectangle((abinList[a_index], histoList[a_index,0]), (abinList[a_index+1]-abinList[a_index]), \
+				(histoList[a_index,1]-histoList[a_index,0]), color=colors[e_index], alpha=0.7))
+		ax.fill_between([], [], [], color=colors[e_index], label=labels[e_index], alpha=0.7)
+
+	ax.plot(xlim, [1,1], ls='--', lw=1, color='k', zorder=0)
+
+	ax.legend(frameon=False, loc='upper right')
+	ax.set_xlim(xlim)
+	ax.set_ylim(ylim)
+	ax.set_xlabel(r"$a_{\bullet,\mathrm{remnant}}$", fontsize=13)
+	ax.set_ylabel(ylabel, fontsize=13)
+	ax.set_yscale(yscale)
+	fig.tight_layout()
+	if output is None:
+		fig.show()
+	else:
+		fig.savefig(output)
+
+def plotEventRateByChiEff(gw_packs, colors, labels, figsize=(4,4), yearsOfObservation=None, yscale='log', xlim=(-1,1), \
+	ylim=(1e-3,1e2), output=None, mode='fill'):
+
+	fig, ax = plt.subplots(figsize=figsize)
+
+	if yearsOfObservation == None:
+		ylabel = '$d^2N/d\log M_\mathrm{chirp} dt \ [\mathrm{yr}^{-1}$]'
+	else:
+		ylabel = "Events After {0} Years".format(yearsOfObservation)
+
+	for e_index in range(len(gw_packs)):
+		abinList, histoList = gw_packs[e_index]
+		abinList = np.array(abinList)
+		histoList = np.array(histoList)
+		if yearsOfObservation == None:
+			spinBinSizes = np.diff(abinList)
+			histoList /= spinBinSizes[0]
+
+		#This line fixes a bug in matplotlib for fill_between and log scaling.
+		histoList[histoList == 0] = 1e-99
+
+		if yearsOfObservation is not None:
+			histoList = histoList * yearsOfObservation
+		if mode == 'fill':
+			ax.fill_between(0.5*(abinList[1:]+abinList[:-1]), histoList[:,0], histoList[:,1], color=colors[e_index], alpha=0.7)
+		elif mode == 'boxes':
+			for a_index in range(len(abinList)-1):
+				ax.add_patch(patches.Rectangle((abinList[a_index], histoList[a_index,0]), (abinList[a_index+1]-abinList[a_index]), \
+				(histoList[a_index,1]-histoList[a_index,0]), color=colors[e_index], alpha=0.7))
+		ax.fill_between([], [], [], color=colors[e_index], label=labels[e_index], alpha=0.7)
+
+	ax.plot(xlim, [1,1], ls='--', lw=1, color='k', zorder=0)
+
+	ax.legend(frameon=False, loc='upper right')
+	ax.set_xlim(xlim)
+	ax.set_ylim(ylim)
+	ax.set_xlabel(r"$\chi_\mathrm{Eff}$", fontsize=13)
+	ax.set_ylabel(ylabel, fontsize=13)
 	ax.set_yscale(yscale)
 	fig.tight_layout()
 	if output is None:

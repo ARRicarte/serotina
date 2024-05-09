@@ -20,7 +20,7 @@ import warnings
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_range=[0,np.inf], Mstar_range=[0,np.inf], Lbol_range=[0,np.inf], fEdd_range=[0,np.inf], \
-	treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, xaxis=np.linspace(-1,1,1000), normalize=True, output=None):
+	treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, xaxis=np.linspace(-1,1,1000), normalize=True, compute_kde=True, output=None, bins=np.linspace(-1,1,13)):
 	"""
 	Read a grove, then produce a Gaussian KDE function of spins.
 	Weighted by halo number densities.
@@ -53,13 +53,8 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 
 			#Pass if some keys were not saved.
 
-			#m_star was bugged.  Skipping...
-			filterKeys = ['m_bh', 'm_halo', 'L_bol', 'eddRatio']
-			filterRanges = [Mbh_range, Mhalo_range, Lbol_range, fEdd_range]
-			'''
 			filterKeys = ['m_bh', 'm_halo', 'm_star', 'L_bol', 'eddRatio']
 			filterRanges = [Mbh_range, Mhalo_range, Mstar_range, Lbol_range, fEdd_range]
-			'''
 			for key, filterRange in zip(filterKeys, filterRanges):
 				try:
 					mask = mask & (megaDict[key] >= filterRange[0]) & (megaDict[key] <= filterRange[1])
@@ -80,7 +75,10 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 
 		if len(spinValues) == 0:
 			#This will happen if there was nothing passing the masking criteria.
-			distributions.append(np.zeros((len(xaxis),3), dtype=float))
+			if compute_kde:
+				distributions.append(np.full((len(xaxis),3), np.nan))
+			else:
+				distributions.append(np.full((len(bins)-1,3), np.nan))
 		else:
 			if n_bootstrap <= 1:
 				if transformFunction is not None:
@@ -106,7 +104,10 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 					distribution.append(savedValues)
 			else:
 				print("Bootstrapping.")
-				storedBootstraps = np.zeros((len(xaxis),n_bootstrap))
+				if compute_kde:
+					storedBootstraps = np.zeros((len(xaxis),n_bootstrap))
+				else:
+					storedBootstraps = np.zeros((len(bins)-1,n_bootstrap))
 				for n_boot in range(n_bootstrap):
 					#Random subsample with replacement...
 					randomIndices = np.random.randint(0, nHalos, nHalos)
@@ -118,47 +119,59 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 						#Multiply weights by the number of times they are selected.
 						bootstrapWeights[selectedTreeIndices==index] *= np.count_nonzero(randomIndices==index)
 
-					#Make a KDE
-					
 					#Optionally, you can provide a function to transform the spins into something else.
 					#This can be useful for models where models tend to pile up at 0.998, for example.
 					if transformFunction is not None:
 						bootstrapSpins = transformFunction(bootstrapSpins)
 
 					try:
-						kde = stats.gaussian_kde(bootstrapSpins, weights=bootstrapWeights)
-						#Store this instance.
-						storedBootstraps[:,n_boot] = kde(xaxis)
+						if compute_kde:
+							kde = stats.gaussian_kde(bootstrapSpins, weights=bootstrapWeights)
+							#Store this instance.
+							storedBootstraps[:,n_boot] = kde(xaxis)
+						else:
+							storedBootstraps[:,n_boot] = np.histogram(bootstrapSpins, bins=bins, weights=bootstrapWeights, density=True)[0]
 						if normalize:
 							storedBootstraps[:,n_boot] /= np.max(storedBootstraps[:,n_boot])
 					except:
 						if len(bootstrapSpins) == 0:
-							#There is simply nothing here.  Pass, leaving all values at 0.
-							pass
+							#There is simply nothing here.  Set values to nan.
+							storedBootstraps[:,n_boot] = np.nan
 						elif np.all(bootstrapSpins == bootstrapSpins[0]):
 							#Errors will happen when all of the values are the same.  In that case, I'm just making a delta function in the right bin.
-							appropriateBin = int(np.floor((bootstrapSpins[0]-xaxis[0])/(xaxis[-1]-xaxis[0])))
-							if normalize:
-								storedBootstraps[appropriateBin,n_boot] = 1.0
+							if compute_kde:
+								appropriateBin = int(np.floor((bootstrapSpins[0]-xaxis[0])/(xaxis[-1]-xaxis[0])))
+								if normalize:
+									storedBootstraps[appropriateBin,n_boot] = 1.0
+								else:
+									storedBootstraps[appropriateBin,n_boot] = 1/np.diff(xaxis)[0]  #Assuming equal bin spacing to integrate to one.
 							else:
-								storedBootstraps[appropriateBin,n_boot] = 1/np.diff(xaxis)[0]  #Assuming equal bin spacing to integrate to one.
+								appropriateBin = int(np.floor((bootstrapSpins[0]-bins[0])/(bins[-1]-bins[0])))
+								if normalize:
+									storedBootstraps[appropriateBin,n_boot] = 1.0
+								else:
+									storedBootstraps[appropriateBin,n_boot] = 1/np.diff(bins)[0]  #Assuming equal bin spacing to integrate to one.
 
 				#Once pieces are in place, take percentiles.
-				distributions.append(np.percentile(storedBootstraps, [16,50,84], axis=1).transpose())
+				distributions.append(np.nanpercentile(storedBootstraps, [16,50,84], axis=1).transpose())
 
 	if output is None:
 		return xaxis, distributions
 	else:
 		D = {}
-		D['bins'] = xaxis
+		if compute_kde:
+			D['bins'] = xaxis
+		else:
+			D['bins'] = bins
 		D['distributions'] = distributions
 		D['ensemble'] = ensemble
 		D['redshifts'] = redshifts
+		D['is_kde'] = compute_kde
 		with open(output, 'wb') as openFile:
 			pickle.dump(D, openFile, protocol=2)
 
 def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None, fig_ax=None, figsize=(5,4), doFormatting=True, fontsize=10,\
-	xlabel=None, ylabel=None, alpha=0.7, xlim=None, ylim=None, show=True, output=None):
+	xlabel=None, ylabel=None, alpha=0.7, xlim=None, ylim=None, show=True, output=None, histogram=False, renormalize=False):
 	"""
 	Starting with the output of computeSpinDistribution(), make a plot.
 	"""
@@ -169,9 +182,20 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 		fig, ax = plt.subplots(1, 1, figsize=figsize)
 
 	if len(probabilityDistribution.shape) == 2:
-		ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
+		if renormalize:
+			probabilityDistribution /= np.max(probabilityDistribution[:,1])
+		if histogram:
+			ax.bar(xaxis[:-1], probabilityDistribution[:,2]-probabilityDistribution[:,0], bottom=probabilityDistribution[:,0], align='edge', width=np.diff(xaxis), alpha=alpha, color=color, label=label)
+			ax.bar(xaxis[:-1], probabilityDistribution[:,1], lw=2, edgecolor=color, align='edge', facecolor='none', width=np.diff(xaxis))
+		else:
+			ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
 	elif len(probabilityDistribution.shape) == 1:
-		ax.plot(xaxis, probabilityDistribution, lw=2, color=color, label=label)
+		if renormalize:
+			probabilityDistribution /= np.max(probabilityDistribution)
+		if histogram:
+			ax.bar(xaxis[:-1], probabilityDistribution, lw=2, color=color, label=label, align='edge', facecolor='none')
+		else:
+			ax.plot(xaxis, probabilityDistribution, lw=2, color=color, label=label)
 
 	if doFormatting:
 		if label is not None:
@@ -186,10 +210,11 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 		fig.show()
 	if output is not None:
 		fig.savefig(output, dpi=400)
+		plt.close(fig)
 
 def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=None, listOfColors=None, figsize=(8,4), xaxis=np.linspace(0,1,1000), figshape=None, show=True, output=None, \
 	Mbh_range=[0,np.inf], Mhalo_range=[0,np.inf], Mstar_range=[0,np.inf], Lbol_range=[0,np.inf], fEdd_range=[0,np.inf], treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, \
-	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="$P/P_\mathrm{max}$", fontsize=11):
+	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="$P/P_\mathrm{max}$", fontsize=11, renormalize=False, compute_kde=True):
 
 	if figshape is None:
 		figshape = (1, len(listOfRedshifts))
@@ -221,12 +246,14 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 				if np.abs(D['redshifts'][pickleIndex]-redshift) > 0.1:
 					print("You asked for z={redshift}, but we're actually plotting z={D['redshifts'][pickleIndex]} from {grove}.")
 				distribution = allDistributions[pickleIndex]
+				histogram = not D['is_kde']
 			else:
 				#This is a folder leading to the ensembles themselves.  Compute from scratch.  This will take a while.
 				xaxis, distribution = computeSpinDistribution(grove, redshift, Mbh_range=Mbh_range, Mhalo_range=Mhalo_range, Mstar_range=Mstar_range, Lbol_range=Lbol_range, fEdd_range=fEdd_range, \
-				treeStartingRedshift=treeStartingRedshift, transformFunction=transformFunction, n_bootstrap=n_bootstrap, xaxis=xaxis)
+				treeStartingRedshift=treeStartingRedshift, transformFunction=transformFunction, n_bootstrap=n_bootstrap, xaxis=xaxis, compute_kde=compute_kde)
 				distribution = distribution[0]
-			plotSpinDistribution(xaxis, distribution, fig_ax=(fig,ax), doFormatting=False, color=color, label=label, show=False)
+				histogram = not compute_kde
+			plotSpinDistribution(xaxis, distribution, fig_ax=(fig,ax), doFormatting=False, color=color, label=label, show=False, histogram=histogram, renormalize=renormalize)
 
 	for z_index in range(len(listOfRedshifts)):
 		#Formatting
@@ -234,7 +261,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 		ax.set_xlim(xlim)
 		ax.set_ylim(ylim)
 		ax.set_xlabel(xlabel, fontsize=fontsize)
-		ax.plot([0,0], [0,1], lw=1, ls=':', zorder=-1, color='k')
+		ax.plot([0,0], ylim, lw=1, ls=':', zorder=-1, color='k')
 		if z_index == 0:
 			ax.set_ylabel(ylabel, fontsize=fontsize)
 			if listOfLabels is not None:
@@ -244,7 +271,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 		ax.text(0.05, 0.95, f"z={listOfRedshifts[z_index]:1.1f}", fontsize=fontsize, ha='left', va='top', transform=ax.transAxes)
 	
 	fig.tight_layout()
-	if show:
-		fig.show()
 	if output is not None:
 		fig.savefig(output, dpi=400)
+	else:
+		fig.show()

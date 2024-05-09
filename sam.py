@@ -165,7 +165,7 @@ class SAM(object):
 		'scheduledMergeTime', 'scheduledFlipTime']
 
 		#This special list is populated with M1, q, and z whenever a black hole merger occurs.  Remnant spin and chi_eff are also included if spin evolution is on.
-		self.bh_mergers = np.empty((0,5))
+		self.bh_mergers = np.empty((0,6))
 
 	def seed(self, relevantProgenitors, m_d=0.05, alpha_c=0.06, T_gas=5000, j_d=0.05, noProgenitor=False, noMergers=False):
 		"""
@@ -332,6 +332,7 @@ class SAM(object):
 				phi1 = 2*np.pi*np.random.random(npts)
 				phi2 = 2*np.pi*np.random.random(npts)
 
+		initialSpins = np.abs(self.spin_bh[primaries])
 		if self.spinEvolution:
 			#Mass-weighted spin projected onto the binary axis, most easily accessed by GW detectors.
 			chi_eff = (self.m_bh[primaries] * np.abs(self.spin_bh[primaries]) * np.cos(theta1) + self.m_bh[secondaries] * np.abs(self.spin_bh[secondaries]) * np.cos(theta2)) / (self.m_bh[primaries] + self.m_bh[secondaries])
@@ -345,7 +346,7 @@ class SAM(object):
 			chi_eff = np.zeros(npts, dtype=float)
 		
 		#Save to a list of all merger events.
-		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff]).transpose()))
+		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff, initialSpins]).transpose()))
 
 		#Simply adding the two masses together.
 		self.m_bh[primaries] += self.m_bh[secondaries]

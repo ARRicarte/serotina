@@ -45,8 +45,9 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 	luminosity = np.zeros_like(mass)
 
 	#A for loop with Runge-Kutta, surely very slow.  Relaxed some precision requirements.
+	#TODO: parallelize
 	for index in range(len(mass)):
-		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=100, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
+		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=50, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
 		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
@@ -54,7 +55,7 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 			raise ValueError("RK45 integrator reached maximum step.")
 		newMass[index] = integrator.mass[integrator.currentIndex]
 		newSpin[index] = integrator.spin[integrator.currentIndex]
-		luminosity[index] = f_Edd[index] * newMass[index]
+		luminosity[index] = f_Edd[index] * calcEddingtonLuminosity(newMass[index])
 
 	return newMass, newSpin, luminosity
 		
