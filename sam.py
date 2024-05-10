@@ -326,9 +326,9 @@ class SAM(object):
 				phi1 = np.full(npts, 0.0)
 				phi2 = np.full(npts, 0.0)
 			else:
-				#One might expect this in gas poor environments.
-				theta1 = 2*np.pi*np.random.random(npts)
-				theta2 = 2*np.pi*np.random.random(npts)
+				#One might expect this in gas poor environments.  Note even sampling with respect to solid angle, and allowing for negative signs (retrograde orbits).
+				theta1 = np.arccos(1.0-np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
+				theta2 = np.arccos(1.0-np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
 				phi1 = 2*np.pi*np.random.random(npts)
 				phi2 = 2*np.pi*np.random.random(npts)
 
@@ -359,8 +359,8 @@ class SAM(object):
 			self.spin_bh[primaries][signToPreserve == -1] *= -1
 
 			if self.violentMergers:
-				#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
-				self.spin_bh[primaries] = self.spin_bh[primaries] * np.random.choice([1,-1], size=len(primaries))
+				#If the merger was retrograde, assume that the new gas reservoir is also retrograde.
+				self.spin_bh[primaries] = self.spin_bh[primaries] * np.sign(theta1)
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:

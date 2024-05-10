@@ -24,10 +24,11 @@ def calcRemnantSpin(m1, m2, a1, a2, theta1=None, theta2=None, phi1=None, phi2=No
 	a2 = np.atleast_1d(a2).astype(float)
 
 	#Choose random angles by default.
+	#Note even sampling of theta with respect to solid angle.  Negative thetas correspond to retrograde orbits.
 	if theta1 is None:
-		theta1 = 2*np.pi*np.random.random(len(m1))
+		theta1 = np.arccos(1.0-np.random.random(len(m1))) * np.random.choice([1.0,-1.0], len(m1))
 	if theta2 is None:
-		theta2 = 2*np.pi*np.random.random(len(m1))
+		theta2 = np.arccos(1.0-np.random.random(len(m1))) * np.random.choice([1.0,-1.0], len(m1))
 	if phi1 is None:
 		phi1 = 2*np.pi*np.random.random(len(m1))
 	if phi2 is None:
