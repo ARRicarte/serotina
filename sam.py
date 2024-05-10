@@ -327,8 +327,8 @@ class SAM(object):
 				phi2 = np.full(npts, 0.0)
 			else:
 				#One might expect this in gas poor environments.
-				theta1 = np.pi*np.random.random(npts)
-				theta2 = np.pi*np.random.random(npts)
+				theta1 = 2*np.pi*np.random.random(npts)
+				theta2 = 2*np.pi*np.random.random(npts)
 				phi1 = 2*np.pi*np.random.random(npts)
 				phi2 = 2*np.pi*np.random.random(npts)
 
@@ -360,7 +360,6 @@ class SAM(object):
 
 			if self.violentMergers:
 				#In principle, I think I should actually be able to get this from the GR formulae, but for now, option for a 50% chance of a flip.
-				flipping = np.random.choice([True,False], size=len(primaries))
 				self.spin_bh[primaries] = self.spin_bh[primaries] * np.random.choice([1,-1], size=len(primaries))
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.

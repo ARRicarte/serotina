@@ -224,13 +224,13 @@ class GravitationalWaveEventCalculator(object):
 
 		return hostMasses, output
 
-    def computeEventRateByRemnantSpin(self, remnantSpinBins=np.linspace(0,1,21), weightByObservability=True):
+	def computeEventRateByRemnantSpin(self, remnantSpinBins=np.linspace(0,1,21), weightByObservability=True):
 
-        output = np.zeros((len(spinBins)-1,2))
-        for a_index in range(len(spinBins)-1):
-            output[a_index,:] = self.computeEventRate(remnantSpinLimits=(remnantSpinBins[a_index],remnantSpinBins[a_index+1]), weightByObservability=weightByObservability)
+		output = np.zeros((len(spinBins)-1,2))
+		for a_index in range(len(spinBins)-1):
+			output[a_index,:] = self.computeEventRate(remnantSpinLimits=(remnantSpinBins[a_index],remnantSpinBins[a_index+1]), weightByObservability=weightByObservability)
 
-        return spinBins, output
+		return spinBins, output
 
 	def computeEventRateBySpin(self, spinBins=np.linspace(0,1,21), weightByObservability=True):
 

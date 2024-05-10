@@ -186,7 +186,8 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 			probabilityDistribution /= np.max(probabilityDistribution[:,1])
 		if histogram:
 			ax.bar(xaxis[:-1], probabilityDistribution[:,2]-probabilityDistribution[:,0], bottom=probabilityDistribution[:,0], align='edge', width=np.diff(xaxis), alpha=alpha, color=color, label=label)
-			ax.bar(xaxis[:-1], probabilityDistribution[:,1], lw=2, edgecolor=color, align='edge', facecolor='none', width=np.diff(xaxis))
+			#ax.bar(xaxis[:-1], probabilityDistribution[:,1], lw=2, edgecolor=color, align='edge', facecolor='none', width=np.diff(xaxis))
+			ax.step(xaxis[:-1], probabilityDistribution[:,1], lw=2, color=color, where='post'))
 		else:
 			ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
 	elif len(probabilityDistribution.shape) == 1:
