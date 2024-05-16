@@ -47,6 +47,7 @@ class GravitationalWaveEventCalculator(object):
 		self.redshifts = np.array([])
 		self.massRatios = np.array([])
 		self.spins = np.array([])
+		self.remnantSpins = np.array([])
 		self.chiEff = np.array([])
 		self.numberDensities = np.array([])
 		self.treeIndices = np.array([])
@@ -67,7 +68,7 @@ class GravitationalWaveEventCalculator(object):
 					self.masses = np.concatenate((self.masses, tree[:,0]))
 					self.massRatios = np.concatenate((self.massRatios, tree[:,1]))
 					self.redshifts = np.concatenate((self.redshifts, tree[:,2]))
-					self.remnantSpins = np.concatenate((self.spins, tree[:,3]))
+					self.remnantSpins = np.concatenate((self.remnantSpins, tree[:,3]))
 					self.chiEff = np.concatenate((self.chiEff, tree[:,4]))
 					self.spins = np.concatenate((self.spins, tree[:,5]))
 					#Don't forget to get rid of little h.
@@ -226,11 +227,11 @@ class GravitationalWaveEventCalculator(object):
 
 	def computeEventRateByRemnantSpin(self, remnantSpinBins=np.linspace(0,1,21), weightByObservability=True):
 
-		output = np.zeros((len(spinBins)-1,2))
-		for a_index in range(len(spinBins)-1):
+		output = np.zeros((len(remnantSpinBins)-1,2))
+		for a_index in range(len(remnantSpinBins)-1):
 			output[a_index,:] = self.computeEventRate(remnantSpinLimits=(remnantSpinBins[a_index],remnantSpinBins[a_index+1]), weightByObservability=weightByObservability)
 
-		return spinBins, output
+		return remnantSpinBins, output
 
 	def computeEventRateBySpin(self, spinBins=np.linspace(0,1,21), weightByObservability=True):
 
@@ -376,7 +377,7 @@ def plotEventRateBySpin(gw_packs, colors, labels, figsize=(4,4), yearsOfObservat
 	ax.legend(frameon=False, loc='upper right')
 	ax.set_xlim(xlim)
 	ax.set_ylim(ylim)
-	ax.set_xlabel(r"$a_{\bullet,\mathrm{remnant}}$", fontsize=13)
+	ax.set_xlabel(r"$a_{\bullet}$", fontsize=13)
 	ax.set_ylabel(ylabel, fontsize=13)
 	ax.set_yscale(yscale)
 	fig.tight_layout()

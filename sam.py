@@ -327,12 +327,13 @@ class SAM(object):
 				phi2 = np.full(npts, 0.0)
 			else:
 				#One might expect this in gas poor environments.  Note even sampling with respect to solid angle, and allowing for negative signs (retrograde orbits).
-				theta1 = np.arccos(1.0-np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
-				theta2 = np.arccos(1.0-np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
+				theta1 = np.arccos(1.0-2*np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
+				theta2 = np.arccos(1.0-2*np.random.random(npts)) * np.random.choice([1.0,-1.0], npts)
 				phi1 = 2*np.pi*np.random.random(npts)
 				phi2 = 2*np.pi*np.random.random(npts)
 
 		initialSpins = np.abs(self.spin_bh[primaries])
+		massRatio = self.m_bh[secondaries]/self.m_bh[primaries]
 		if self.spinEvolution:
 			#Mass-weighted spin projected onto the binary axis, most easily accessed by GW detectors.
 			chi_eff = (self.m_bh[primaries] * np.abs(self.spin_bh[primaries]) * np.cos(theta1) + self.m_bh[secondaries] * np.abs(self.spin_bh[secondaries]) * np.cos(theta2)) / (self.m_bh[primaries] + self.m_bh[secondaries])
@@ -346,7 +347,7 @@ class SAM(object):
 			chi_eff = np.zeros(npts, dtype=float)
 		
 		#Save to a list of all merger events.
-		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], self.m_bh[secondaries]/self.m_bh[primaries], cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff, initialSpins]).transpose()))
+		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], massRatio, cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff, initialSpins]).transpose()))
 
 		#Simply adding the two masses together.
 		self.m_bh[primaries] += self.m_bh[secondaries]
@@ -360,7 +361,9 @@ class SAM(object):
 
 			if self.violentMergers:
 				#If the merger was retrograde, assume that the new gas reservoir is also retrograde.
-				self.spin_bh[primaries] = self.spin_bh[primaries] * np.sign(theta1)
+				flippers = (np.abs(theta1) > np.pi/2) & (massRatio >= 0.05)
+				if np.any(flippers):
+					self.spin_bh[primaries] = (-1)**(flippers) * self.spin_bh[primaries]
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
