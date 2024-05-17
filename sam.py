@@ -339,7 +339,7 @@ class SAM(object):
 			chi_eff = (self.m_bh[primaries] * np.abs(self.spin_bh[primaries]) * np.cos(theta1) + self.m_bh[secondaries] * np.abs(self.spin_bh[secondaries]) * np.cos(theta2)) / (self.m_bh[primaries] + self.m_bh[secondaries])
 
 			#Note that only positive spins go into this formula.
-			signToPreserve = np.sign(self.spin_bh[primaries])
+			initiallyRetrograde = self.spin_bh[primaries] < 0
 			self.spin_bh[primaries] = bhb.calcRemnantSpin(self.m_bh[primaries], self.m_bh[secondaries], \
 			np.abs(self.spin_bh[primaries]), np.abs(self.spin_bh[secondaries]), \
 			theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
@@ -357,13 +357,14 @@ class SAM(object):
 
 		if self.spinEvolution:
 			#By default, maintain prograde or retrograde nature of the primary.  That means re-flip anything that was negative.
-			self.spin_bh[primaries][signToPreserve == -1] *= -1
+			if np.any(initiallyRetrograde):
+				self.spin_bh[primaries] = (-1)**(int(initiallyRetrograde)) * self.spin_bh[primaries]
 
 			if self.violentMergers:
 				#If the merger was retrograde, assume that the new gas reservoir is also retrograde.
 				flippers = (np.abs(theta1) > np.pi/2) & (massRatio >= 0.05)
 				if np.any(flippers):
-					self.spin_bh[primaries] = (-1)**(flippers) * self.spin_bh[primaries]
+					self.spin_bh[primaries] = (-1)**(int(flippers)) * self.spin_bh[primaries]
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
