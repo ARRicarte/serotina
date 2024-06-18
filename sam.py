@@ -85,7 +85,7 @@ class SAM(object):
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignmentParameters': [np.inf], 'MAD': False, 'violentMergers': False, 'alwaysMergeEmpty': True}
+		'diskAlignmentParameters': [np.inf], 'MAD_burst': False, 'MAD_steady': False, 'violentMergers': False, 'alwaysMergeEmpty': True}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -591,7 +591,7 @@ class SAM(object):
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
 			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD=self.MAD)
+			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_burst=self.MAD_burst, MAD_steady=self.MAD_steady)
 
 			#Change mode if necessary
 			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar

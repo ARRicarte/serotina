@@ -244,7 +244,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 				allDistributions = D['distributions']
 				pickleIndex = np.argmin(np.abs(np.array(D['redshifts'])-redshift))
 				if np.abs(D['redshifts'][pickleIndex]-redshift) > 0.1:
-					print("You asked for z={redshift}, but we're actually plotting z={D['redshifts'][pickleIndex]} from {grove}.")
+					print(f"You asked for z={redshift}, but we're actually plotting z={D['redshifts'][pickleIndex]} from {grove}.")
 				distribution = allDistributions[pickleIndex]
 				histogram = not D['is_kde']
 			else:
