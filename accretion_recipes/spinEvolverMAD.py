@@ -110,13 +110,16 @@ def k_ratio(spin):
 	else:
 		return np.minimum(0.35, 0.1 + 0.5*spin)
 
-def calcJetPower(mass, spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2):
+def calcJetPower(mass, spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_superEddington=True, mad_subEddington=True):
 	"""
 	Use a fitting function for phi and connect to BZ.
 	"""
 
-	#Simply eta * Mdot * c^2
-	return etaEM(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * madness * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) * c**2 * solarMass / yr
+	if (mad_superEddington & (eddingtonRatio > fEdd_ADAF_threshold)) | (mad_subEddington & (eddingtonRatio <= fEdd_ADAF_threshold)):
+		#Simply eta * Mdot * c^2
+		return etaEM(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * madness * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) * c**2 * solarMass / yr
+	else:
+		return 0.0
 
 def calcMassEvolutionRate(mass, spin, eddingtonRatio):
 	"""
@@ -154,13 +157,13 @@ def calcSpinup(spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_
 	Spinup parameter of Gammie et al. (2004), Shapiro et al. (2005)
 	"""
 
-	if eddingtonRatio < fEdd_ADAF_threshold:
+	if mad_subEddington & (eddingtonRatio < fEdd_ADAF_threshold):
 		#You're a MAD ADAF
 		return calcSpinupMAD(spin) * madness + calcSpinupNT(spin) * (1.0-madness)
 	else:
 		#Start with hydrodynamic spinup.
 		s = sHD(spin, eddingtonRatio)
-		if spin != 0:
+		if mad_superEddington & (spin != 0):
 			#Then, add electromagnetic spinup.
 			s += -etaEM(spin, eddingtonRatio) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
 		if madness < 1.0:
