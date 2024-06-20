@@ -74,16 +74,16 @@ def sHD(spin, eddingtonRatio, parameters=[0.01971853]):
 	xi = parameters[0]*eddingtonRatio
 	return (calcSpinupNT(spin) + sHD_min(spin)*xi) / (1+xi)
 
-def calcMagnetization(spin, eddingtonRatio, parameters=[1.29, 1.88], fEdd_ADAF_threshold=3e-2):
+def calcMagnetization(spin, eddingtonRatio, madness, parameters=[1.29, 1.88], fEdd_ADAF_threshold=3e-2):
 	"""
 	Newly introduced model function.
 	"""
 
 	if eddingtonRatio > fEdd_ADAF_threshold:
 		evolutionFactor = (eddingtonRatio/parameters[1])**parameters[0]
-		return calcMaximumMagnetization(spin) * evolutionFactor / (1.0 + evolutionFactor)
+		return madness * calcMaximumMagnetization(spin) * evolutionFactor / (1.0 + evolutionFactor)
 	else:
-		return calcMaximumMagnetization(spin)
+		return madness * calcMaximumMagnetization(spin)
 
 def jetEfficiencyFunction(phi, spin, kappa=0.05):
 	"""
@@ -93,12 +93,12 @@ def jetEfficiencyFunction(phi, spin, kappa=0.05):
 	horizonAngularVelocity = Omega_H(spin)
 	return kappa / (4*np.pi) * phi**2 * horizonAngularVelocity**2 * (1. + 1.38*horizonAngularVelocity**2 - 9.2*horizonAngularVelocity**4)
 
-def etaEM(spin, eddingtonRatio, fEdd_ADAF_threshold=3e-2):
+def etaEM(spin, eddingtonRatio, madness, fEdd_ADAF_threshold=3e-2):
 	"""
 	Assume models for magnetization and jet efficiency.
 	"""
 
-	return jetEfficiencyFunction(calcMagnetization(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold), spin)
+	return jetEfficiencyFunction(calcMagnetization(spin, eddingtonRatio, madness, fEdd_ADAF_threshold=fEdd_ADAF_threshold), spin)
 
 def k_ratio(spin):
 	"""
@@ -110,13 +110,13 @@ def k_ratio(spin):
 	else:
 		return np.minimum(0.35, 0.1 + 0.5*spin)
 
-def calcJetPower(mass, spin, eddingtonRatio, fEdd_ADAF_threshold=3e-2):
+def calcJetPower(mass, spin, eddingtonRatio, madness, fEdd_ADAF_threshold=3e-2):
 	"""
 	Use a fitting function for phi and connect to BZ.
 	"""
 
 	#Simply eta * Mdot * c^2
-	return etaEM(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) * c**2 * solarMass / yr
+	return etaEM(spin, eddingtonRatio, madness, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) * c**2 * solarMass / yr
 
 def calcMassEvolutionRate(mass, spin, eddingtonRatio):
 	"""
@@ -149,7 +149,7 @@ def calcSpinupMAD(spin):
 	order = np.arange(len(fitCoefficients))
 	return np.sum(fitCoefficients * spin**order)
 
-def calcSpinup(spin, eddingtonRatio, fEdd_ADAF_threshold=3e-2):
+def calcSpinup(spin, eddingtonRatio, madness, fEdd_ADAF_threshold=3e-2):
 	"""
 	Spinup parameter of Gammie et al. (2004), Shapiro et al. (2005)
 	"""
@@ -162,22 +162,22 @@ def calcSpinup(spin, eddingtonRatio, fEdd_ADAF_threshold=3e-2):
 		s = sHD(spin, eddingtonRatio)
 		if spin != 0:
 			#Then, add electromagnetic spinup.
-			s += -etaEM(spin, eddingtonRatio) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
+			s += -etaEM(spin, eddingtonRatio, madness) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
 		return s
 
-def calcSpinEvolutionRate(mass, spin, eddingtonRatio, fEdd_ADAF_threshold=3e-2):
+def calcSpinEvolutionRate(mass, spin, eddingtonRatio, madness, fEdd_ADAF_threshold=3e-2):
 	"""
 	Combine equations of Narayan et al. (2022) with new Mdot dependence.
 	"""
 	
-	return calcSpinup(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) / mass
+	return calcSpinup(spin, eddingtonRatio, madness, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) / mass
 
 class SpinEvolverRK45(object):
 	"""
 	Use Runge-Kutta-Fehlberg algorithm to integrate spin, mass, and jet power at once.
 	"""
 
-	def __init__(self, M0, a0, fEdd0, nsteps=1e6, maximumTime_yr=13.8e9, maximumMass=np.inf, minimumSpin=-0.998, maximumSpin=0.998, allowedFractionalMassError=1e-10, allowedSpinError=1e-10, initialTimeStep_yr=1e6, minimumFractionalTimeResolution=0.001, silent=True):
+	def __init__(self, M0, a0, fEdd0, nsteps=1e6, maximumTime_yr=13.8e9, maximumMass=np.inf, minimumSpin=-0.998, maximumSpin=0.998, allowedFractionalMassError=1e-10, allowedSpinError=1e-10, initialTimeStep_yr=1e6, minimumFractionalTimeResolution=0.001, madness=1.0, silent=True):
 
 		#Some cleanup
 		M0 = float(M0)
@@ -203,6 +203,7 @@ class SpinEvolverRK45(object):
 		self.eddingtonRatio[0] = np.nan
 		self.jetPower = np.zeros(nsteps)
 		self.jetPower[0] = calcJetPower(M0, a0, fEdd0)
+		self.madness = float(madness)
 
 		#Integration parameters
 		self.timeStep = initialTimeStep_yr  #Will naturally get bigger.
@@ -265,8 +266,8 @@ class SpinEvolverRK45(object):
 				spinPrediction = np.maximum(self.minimumSpin,np.minimum(self.maximumSpin, spinPrediction))
 
 				fEdd = eddingtonRatioFunction(self.time[self.currentIndex] + self.timeStep*self._A[k], massPrediction, spinPrediction)
-				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, fEdd)
-				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd)
+				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, fEdd, self.madness)
+				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd, self.madness)
 			proposedMass = self.mass[self.currentIndex] + np.sum(self._CH * k_list_mass)
 			truncationError_mass = np.abs(np.sum(self._CT * k_list_mass))
 			if truncationError_mass > 0:
@@ -294,7 +295,7 @@ class SpinEvolverRK45(object):
 		self.mass[self.currentIndex+1] = proposedMass
 		self.spin[self.currentIndex+1] = proposedSpin
 		self.eddingtonRatio[self.currentIndex+1] = eddingtonRatioFunction(self.time[self.currentIndex+1], self.mass[self.currentIndex+1], self.spin[self.currentIndex])
-		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1])
+		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1], self.madness)
 		self.currentIndex += 1
 		if not self.silent:
 			print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
@@ -309,7 +310,7 @@ class SpinEvolverRK45(object):
 		"""
 
 		self.eddingtonRatio[0] = eddingtonRatioFunction(0, self.mass[0], self.spin[0])
-		self.jetPower[0] = calcJetPower(self.mass[0], self.spin[0], self.eddingtonRatio[0])
+		self.jetPower[0] = calcJetPower(self.mass[0], self.spin[0], self.eddingtonRatio[0], self.madness)
 		while not self.finished:
 			self.evolve(eddingtonRatioFunction)
 
