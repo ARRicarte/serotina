@@ -3,5 +3,6 @@ from .calcSpinEvolutionFromAccretion import *
 from .calcRadiativeEfficiency import *
 from .integrateAccretion import *
 from .accretionDualMode import *
+from .accretionDualModeDecline import *
 from .calcEddingtonLuminosity import *
 from .spinEvolverMAD import *

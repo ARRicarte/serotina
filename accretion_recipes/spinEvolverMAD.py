@@ -165,7 +165,7 @@ def calcSpinup(spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_
 		s = sHD(spin, eddingtonRatio)
 		if mad_superEddington & (spin != 0):
 			#Then, add electromagnetic spinup.
-			s += -etaEM(spin, eddingtonRatio) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
+			s += -etaEM(spin, eddingtonRatio, fEdd_ADAF_threshold=fEdd_ADAF_threshold) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
 		if madness < 1.0:
 			s = s * madness + calcSpinupNT(spin) * (1.0-madness)
 		return s
@@ -276,7 +276,7 @@ class SpinEvolverRK45(object):
 
 				fEdd = eddingtonRatioFunction(self.time[self.currentIndex] + self.timeStep*self._A[k], massPrediction, spinPrediction)
 				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, fEdd)
-				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd, madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold)
+				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd, madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington)
 			proposedMass = self.mass[self.currentIndex] + np.sum(self._CH * k_list_mass)
 			truncationError_mass = np.abs(np.sum(self._CT * k_list_mass))
 			if truncationError_mass > 0:
@@ -304,7 +304,7 @@ class SpinEvolverRK45(object):
 		self.mass[self.currentIndex+1] = proposedMass
 		self.spin[self.currentIndex+1] = proposedSpin
 		self.eddingtonRatio[self.currentIndex+1] = eddingtonRatioFunction(self.time[self.currentIndex+1], self.mass[self.currentIndex+1], self.spin[self.currentIndex])
-		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1], madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold)
+		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1], madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington)
 		self.currentIndex += 1
 		if not self.silent:
 			print(f"t={self.time[self.currentIndex]:1.3e}, f_Edd={self.eddingtonRatio[self.currentIndex]:1.3e}, M={self.mass[self.currentIndex]:1.3e}, a={self.spin[self.currentIndex]:1.3e}, P_jet={self.jetPower[self.currentIndex]:1.3e}")
@@ -319,7 +319,7 @@ class SpinEvolverRK45(object):
 		"""
 
 		self.eddingtonRatio[0] = eddingtonRatioFunction(0, self.mass[0], self.spin[0])
-		self.jetPower[0] = calcJetPower(self.mass[0], self.spin[0], self.eddingtonRatio[0], self.madness)
+		self.jetPower[0] = calcJetPower(self.mass[0], self.spin[0], self.eddingtonRatio[0], madness=self.madness)
 		while not self.finished:
 			self.evolve(eddingtonRatioFunction)
 

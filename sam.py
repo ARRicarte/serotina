@@ -82,10 +82,10 @@ class SAM(object):
 		'majorMergerMassRatio': 0.1, 'constant_f_min': None, 'constant_f_max': None, 'z_superEdd': 30, 'howToSave': 'progenitors', \
 		'spinEvolution': False, 'MsigmaNormalization': 8.45, 'MsigmaSlope': 5.0, 'spinMax': 0.998, 'mergerKicks': False, 'fEdd_MyrPerDex': 10.0, \
 		'useMsigmaCap': True, 'fixedSeedMass': None, 'silent': False, 'randomFractionOn': 0.0, 'alignMergerSpins': False, 'seedingSigma': 3.5, \
-		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'includeDecline': False, 'f_EddCrit': None, \
+		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'f_EddCrit': 3e-2, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignmentParameters': [np.inf], 'MAD_burst': False, 'MAD_steady': False, 'violentMergers': False, 'alwaysMergeEmpty': True}
+		'diskAlignmentParameters': [np.inf], 'MAD_sub': False, 'MAD_super': False, 'violentMergers': False, 'alwaysMergeEmpty': True, 'powerLawDecline': None}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -285,7 +285,7 @@ class SAM(object):
 			self.seedType = np.concatenate((self.seedType, np.array(seedTypes)))
 			self.bhToProg = np.concatenate((self.bhToProg, np.array(seededProgenitors)))
 			self.seedTime = np.concatenate((self.seedTime, np.full(n_new,self.uniqueTime[self.step])))
-			self.t_decline = np.concatenate((self.t_decline, np.zeros(n_new)))
+			self.t_decline = np.concatenate((self.t_decline, np.full(n_new,np.inf)))
 			self.t_fEdd = np.concatenate((self.t_fEdd, np.zeros(n_new)))
 			newModes = np.full(n_new,'',dtype=(str,10))
 			if self.uniqueRedshift[self.step] >= self.z_superEdd:
@@ -392,7 +392,7 @@ class SAM(object):
 		self.scheduledMergeTime[bh_ids] = 0
 		self.scheduledFlipTime[bh_ids] = 0
 		self.accretionBudget[bh_ids] = 0
-		self.t_decline[bh_ids] = 0
+		self.t_decline[bh_ids] = np.inf
 		self.mode[bh_ids] = ''
 
 	def createWanderers(self, bh_ids, targets):
@@ -405,7 +405,7 @@ class SAM(object):
 		self.scheduledMergeTime[bh_ids] = 0
 		self.scheduledFlipTime[bh_ids] = 0
 		self.accretionBudget[bh_ids] = 0
-		self.t_decline[bh_ids] = 0		
+		self.t_decline[bh_ids] = np.inf
 		self.mode[bh_ids] = ''
 
 	def scheduleBHTransfer(self, bh_ids, targets, times):
@@ -533,7 +533,9 @@ class SAM(object):
 
 	def integrateAll_nobudget_cap_nodecline(self, bhs, timeSteps, times):
 		"""
-		~self.useColdReservoir & self.useMsigmaCap & ~self.includeDecline
+		~self.useColdReservoir & self.useMsigmaCap & (self.powerLawDecline is None)
+
+		Note that times is the END of the timestep.
 		"""
 
 		#Determine which black holes are accreting
@@ -591,7 +593,59 @@ class SAM(object):
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
 			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_burst=self.MAD_burst, MAD_steady=self.MAD_steady)
+			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub)
+
+			#Change mode if necessary
+			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar
+			self.mode[accretors[finishedQuasars]] = ''
+
+			#Keep track of what was gained from the burst mode and the steady mode.
+			self.m_burst[accretors] += growthFromBurst
+			self.m_steady[accretors] += growthFromSteady
+
+		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
+		if np.any(~accreting):
+			self.L_bol[nonAccretors] = 0
+			self.eddRatio[nonAccretors] = 0
+		self.lastIntegrationTime[bhs] = times
+
+	def integrateAll_nobudget_cap_decline(self, bhs, timeSteps, times):
+		"""
+		~self.useColdReservoir & self.useMsigmaCap & (self.powerLawDecline is not None)
+
+		Note that times is the END of the timestep.
+		"""
+
+		#Determine which black holes are accreting
+		accreting = (self.mode[bhs] == 'quasar') | (self.t_decline[bhs] < np.inf)
+		accretors = bhs[accreting]
+		nonAccretors = bhs[~accreting]
+		redshifts = cosmology_functions.t2z(times)
+		if np.any(accreting):
+			initialMasses = self.m_bh[accretors]
+
+			#Mass limits are determined by the accretionBudget.
+			massLimitsQuasar = self.M_bhSigma(self.bhToProg[accretors])
+			massLimitsSteady = np.full(len(accretors), np.inf)
+
+			#You may find that a quasar has overgrown its accretion budget here.  If this happens, put it into decline.
+			overgrown = (self.mode[accretors] == 'quasar') & (self.m_bh[accretors] > massLimitsQuasar)
+			if np.any(overgrown):
+				self.t_decline[accretors[overgrown]] = times[accreting][overgrown] - timeSteps[accreting][overgrown]
+				self.mode[accretors[overgrown]] = ''
+
+			#Integrate with Cython package
+			f_EddMax = np.zeros(sum(accreting))
+			if self.constant_f_max is not None:
+				f_EddMax[self.mode[accretors]=='quasar'] = self.constant_f_max
+			else:
+				f_EddMax[self.mode[accretors]=='quasar'] = sf.draw_typeI(np.sum(self.mode[accretors]=='quasar'), redshifts[accreting][self.mode[accretors]=='quasar'])
+
+			#The actual integration step.
+			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], self.t_decline[accretors], growthFromBurst, growthFromSteady = \
+			acc.accretionDualModeDecline(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], self.t_decline[accretors], f_EddMax, 
+			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
+			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub, powerLawDecline=self.powerLawDecline, sigma_steady=sf._sigma_typeI(redshifts[accreting]))
 
 			#Change mode if necessary
 			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar
@@ -929,6 +983,12 @@ class SAM(object):
 
 			#Find corresponding central black holes, if they exist
 			matchedProgenitor, feedingHole = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole[:,0])
+
+			#Check the criterion that quasar targets are below the maximum mass.  Otherwise, don't trigger.
+			if len(feedingHole) > 0:
+				massLimitsQuasar = self.M_bhSigma(self.bhToProg[feedingHole])
+				feedingHole = feedingHole[self.m_bh[feedingHole] < massLimitsQuasar]
+
 			if len(feedingHole) > 0:
 				self.integrateBHs(feedingHole, time, integrateAll)
 
@@ -942,7 +1002,9 @@ class SAM(object):
 						#Push Eddington ratio to something appropriate for a Type I AGN.
 						self.eddRatio[feedingHole] = sf.draw_typeI(len(feedingHole), np.full(len(feedingHole), self.uniqueRedshift[self.step]))
 				else:
-					self.mode[feedingHole] = 'quasar'
+					notQuasars = self.mode[feedingHole] != 'quasar'
+					self.mode[feedingHole[notQuasars]] = 'quasar'
+					self.t_decline[feedingHole[notQuasars]] = np.inf
 			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
 		#Merge BHs
@@ -1070,18 +1132,19 @@ class SAM(object):
 			#NOTE:  This is a place to make new accretion recipes! It may be as simple as just making a new bound method if you don't need extra infrastructure.
 
 			#Determine the accretion recipe we're currently using.
-			#TODO:  Make this cleaner.  Most of these are gone actually.
+			#TODO:  Make this cleaner.  Most of these are gone actually, especially useColdReservoir stuff.
 			if self.uniqueRedshift[self.step] > self.z_superEdd:
 				integrateAll = self.integrateAll_superEdd
 			elif self.useColdReservoir & ~self.useMsigmaCap:
 				integrateAll = self.integrateAll_budget_nocap_nodecline
 			elif ~self.useColdReservoir & self.useMsigmaCap:
-				integrateAll = self.integrateAll_nobudget_cap_nodecline
-			elif self.useColdReservoir & self.useMsigmaCap:
-				if ~self.includeDecline:
-					integrateAll = self.integrateAll_budget_cap_nodecline
+				#Only these are currently being used.
+				if self.powerLawDecline is None:
+					integrateAll = self.integrateAll_nobudget_cap_nodecline
 				else:
-					integrateAll = self.integrateAll_budget_cap_decline
+					integrateAll = self.integrateAll_nobudget_cap_decline
+			elif self.useColdReservoir & self.useMsigmaCap:
+				integrateAll = self.integrateAll_budget_cap_nodecline
 			else:
 				raise RuntimeError("This mode isn't implemented.  Write your own bound function for this.")
 

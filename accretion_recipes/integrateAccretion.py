@@ -33,11 +33,11 @@ def integrateAccretion(mass, spin, f_Edd, timeStep, includeSpinDependence=False,
 		newSpin = spin
 	return newMass, newSpin, luminosity
 
-def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998):
+def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998, MAD_super=False, MAD_sub=False):
 	"""
 	Account for MAD disks and use an integrator to evolve mass and spin.  Not optimized.
 
-	f_EddCrit not currently being used, nor is includeHotTransition.  Add later.
+	includeHotTransition not currently used.
 	"""
 
 	newMass = np.zeros_like(mass)
@@ -48,7 +48,8 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 	#TODO: parallelize
 	for index in range(len(mass)):
 		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=50, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
-		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0)
+		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0, \
+		mad_superEddington=MAD_super, mad_subEddington=MAD_sub, fEdd_ADAF_threshold=f_EddCrit)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
 		if integrator.time[integrator.currentIndex] < timeStep[index]*1e9:
