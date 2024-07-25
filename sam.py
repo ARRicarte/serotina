@@ -654,7 +654,7 @@ class SAM(object):
 			needsDeclineTime = self.t_decline[accretors[finishedQuasars]] == np.inf
 			if np.any(needsDeclineTime):
 				#accretionDualModeDecline isn't supposed to let this happen, but it may occur due to approximations made when estimating time spent as quasar.
-				self.t_decline[accretors[finishedQuasars][needsDeclineTime]] = np.full(np.sum(needsDeclineTime), times[accretors[finishedQuasars][needsDeclineTime]])
+				self.t_decline[accretors[finishedQuasars][needsDeclineTime]] = np.full(np.sum(needsDeclineTime), times[accreting][finishedQuasars][needsDeclineTime])
 
 			#Keep track of what was gained from the burst mode and the steady mode.
 			self.m_burst[accretors] += growthFromBurst
