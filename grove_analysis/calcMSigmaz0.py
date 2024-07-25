@@ -16,10 +16,12 @@ def sigmaToM(sigmaList, alphaBeta=(8.32,5.35)):
 
 def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=True, labels=None, \
 	colors=None, figsize=(6,6), output=None, iso=None, includeSatellites=False, minSigmaFit=200, fitALine=False, xlim=(20,500), ylim=(1e3,1e11), \
-	outFiles=None):
+	outFiles=None, figshape=None):
 
 	n_ensembles = len(ensembles)
-	fig, axarr = plt.subplots(np.min((n_ensembles,2)), int(np.ceil(float(n_ensembles)/2)), figsize=figsize, sharex=True, sharey=False)
+	if figshape is None:
+		figshape = (np.min((n_ensembles,2)), int(np.ceil(float(n_ensembles)/2)))
+	fig, axarr = plt.subplots(figshape[0], figshape[1], figsize=figsize, sharex=True, sharey=False)
 	if iso is None:
 		iso = [False]*len(ensembles)
 
@@ -32,12 +34,13 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 		sigma = np.array([])
 
 		ensemble_folder = ensembles[e_index]
-		ensemble_files = [file for file in os.listdir(ensemble_folder) if file[-5:]=='.pklz']
+		#ensemble_files = [file for file in os.listdir(ensemble_folder) if file[-5:]=='.pklz']
+		ensemble_files = ['m12.00n20.pklz']
 
 		for file in ensemble_files:
 			with gzip.open(ensemble_folder+'/'+file, 'rb') as myfile:
 				megaDict = pickle.load(myfile)
-				selection = megaDict['redshift'] == 0
+				selection = (megaDict['redshift'] == 0) & (megaDict['bhToProg'] != -1)
 				if not includeSatellites:
 					selection = selection & (megaDict['satelliteToCentral'] == -1)
 				m_bh = np.concatenate((m_bh, megaDict['m_bh'][selection]))

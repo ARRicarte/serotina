@@ -12,3 +12,5 @@ from .plotMergedMassFraction import *
 from .plotOccupationFractions import *
 from .plotSpinDistributions import *
 from .plotJetPowerDistributions import *
+from .plotSpinMassRelation import *
+from .bolometricLuminosityFunctionsShen2020 import *

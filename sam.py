@@ -471,6 +471,7 @@ class SAM(object):
 
 			#Turn off any quasars
 			self.mode[bhsOfLost] = ''
+			self.t_decline[bhsOfLost] = np.inf
 			self.accretionBudget[bhsOfLost] = 0
 
 	def mergeHalo(self, indices, targets):
@@ -647,18 +648,24 @@ class SAM(object):
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
 			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub, powerLawDecline=self.powerLawDecline, sigma_steady=sf._sigma_typeI(redshifts[accreting]))
 
-			#Change mode if necessary
-			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar
+			#Change mode if necessary.  
+			finishedQuasars = (self.mode[accretors] == 'quasar') & (self.m_bh[accretors] >= massLimitsQuasar)
 			self.mode[accretors[finishedQuasars]] = ''
+			needsDeclineTime = self.t_decline[accretors[finishedQuasars]] == np.inf
+			if np.any(needsDeclineTime):
+				#accretionDualModeDecline isn't supposed to let this happen, but it may occur due to approximations made when estimating time spent as quasar.
+				self.t_decline[accretors[finishedQuasars][needsDeclineTime]] = np.full(np.sum(needsDeclineTime), times[accretors[finishedQuasars][needsDeclineTime]])
 
 			#Keep track of what was gained from the burst mode and the steady mode.
 			self.m_burst[accretors] += growthFromBurst
 			self.m_steady[accretors] += growthFromSteady
 
 		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
+		'''
 		if np.any(~accreting):
 			self.L_bol[nonAccretors] = 0
 			self.eddRatio[nonAccretors] = 0
+		'''
 		self.lastIntegrationTime[bhs] = times
 
 	def integrateBHs(self, bhs, endTime, integratingMethod):

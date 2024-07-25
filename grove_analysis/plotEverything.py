@@ -53,7 +53,7 @@ def plotEverything(ensembles, colors, labels, outFolder, \
 		redshiftSlices = [0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; xlim=(1e9,1e15); ylim=(1e-9,1e0); figsize=(8,8); plotUnconvolved=False
 		lumFuncts = [lum.calcBolometricLuminosityFunctions(e, redshiftSlices=redshiftSlices, logRange=logHostMassRange, n_mass=n_mass, n_sample=n_sample, logAGNLumBins=np.linspace(6,15,101)) for e in ensembles]
 		lum.plotLuminosityFunctions(lumFuncts, labels=labels, colors=colors, redshiftSlices=redshiftSlices, plotUnconvolved=plotUnconvolved, showCompleteness=False, \
-		figsize=figsize, xlim=xlim, ylim=ylim, numberOfDexToConvolve=numberOfDexToConvolve, showLynx=False, showOnoue=False, output=outFolder+'lum.pdf')
+		figsize=figsize, xlim=xlim, ylim=ylim, numberOfDexToConvolve=numberOfDexToConvolve, output=outFolder+'lum.pdf')
 
 	#Occupation Fractions
 	if occupation:

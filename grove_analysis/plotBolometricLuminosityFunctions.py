@@ -20,6 +20,7 @@ from ..helpers import z6_lf
 from ..cosmology import cosmology_functions as cf
 from ..helpers import absorptionFractions as af
 from scipy.integrate import simps
+from . import bolometricLuminosityFunctionsShen2020 as shen2020
 import matplotlib.patches as patches
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
@@ -93,19 +94,22 @@ def calcBolometricLuminosityFunctions(ensemble, redshiftSlices=[0.1, 0.2, 0.5, 1
 	return logAGNLumBins, agnLumFunctionRange
 
 def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], figsize=(8,8), \
-	figShape=None, plotConvolved=True, plotUnconvolved=True, numberOfDexToConvolve=0.4, xlim=(1e9,1e15), ylim=(1e-9,1e0), output=None, includeUeda=True, \
-	showCompleteness=False, showLynx=True, showOnoue=True, showAxis=False, completenessFile='./bh_completeness_50_convolved0.3.pkl'):
+	figShape=None, plotConvolved=True, plotUnconvolved=True, numberOfDexToConvolve=0.4, xlim=(1e9,1e15), ylim=(1e-9,1e0), output=None, includeUeda=False, includeHopkins=False, includeShen=True, \
+	showCompleteness=False, showLynx=False, showOnoue=False, showAxis=False, completenessFile='./bh_completeness_50_convolved0.3.pkl', fig_axarr=None):
 	"""
 	Plot the output of the previous function
 	"""
 
 	#Initialize figure
-	if figShape is None:
-		if len(redshiftSlices) >= 3:
-			figShape = (np.ceil(float(len(redshiftSlices))/3).astype(int), 3)
-		else:
-			figShape = (1,len(redshiftSlices))
-	fig, axarr = plt.subplots(figShape[0], figShape[1], figsize=figsize, sharex=False, sharey=True)
+	if fig_axarr is None:
+		if figShape is None:
+			if len(redshiftSlices) >= 3:
+				figShape = (np.ceil(float(len(redshiftSlices))/3).astype(int), 3)
+			else:
+				figShape = (1,len(redshiftSlices))
+		fig, axarr = plt.subplots(figShape[0], figShape[1], figsize=figsize, sharex=False, sharey=True)
+	else:
+		fig, axarr = fig_axarr
 
 	#Annoyingly, if figShape[i] == 1, then axarr doesn't have enough dimensions.
 	if not hasattr(axarr, '__len__'):
@@ -116,16 +120,18 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 		axarr = axarr.reshape(len(axarr), 1)
 
 	#Read in Hopkins data
-	with open(currentPath + '../lookup_tables/bh_data/bol_lf_point_dump.dat', 'r') as myfile:
-		hopkinsDataPoints = np.loadtxt(myfile)
-	z_hop = hopkinsDataPoints[:,0]
-	unique_z_hop = np.unique(z_hop)
+	if includeHopkins:
+		with open(currentPath + '../lookup_tables/bh_data/bol_lf_point_dump.dat', 'r') as myfile:
+			hopkinsDataPoints = np.loadtxt(myfile)
+		z_hop = hopkinsDataPoints[:,0]
+		unique_z_hop = np.unique(z_hop)
 
-	with open(currentPath + '../lookup_tables/bh_data/ueda14/ueda14.pkl', 'rb') as myfile:
-		uedaRanges = pickle.load(myfile, encoding='latin1')
-	z_ueda = uedaRanges['redshift']
-	lum_ueda = uedaRanges['luminosity']
-	numberDensity_ueda = uedaRanges['luminosityFunction']
+	if includeUeda:
+		with open(currentPath + '../lookup_tables/bh_data/ueda14/ueda14.pkl', 'rb') as myfile:
+			uedaRanges = pickle.load(myfile, encoding='latin1')
+		z_ueda = uedaRanges['redshift']
+		lum_ueda = uedaRanges['luminosity']
+		numberDensity_ueda = uedaRanges['luminosityFunction']
 
 	if showCompleteness:
 		with open(completenessFile, 'rb') as myfile:
@@ -156,13 +162,14 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 
 			#If this is the last time around, but up the Hopkins data points and do some formatting.
 			if e_index == len(lumFuncts)-1:
-				closest_z = unique_z_hop[np.argmin(np.abs(unique_z_hop-redshiftSlices[z_index]))]
-				if np.abs(closest_z - redshiftSlices[z_index]) < 0.1:
-					x_hop = 10**hopkinsDataPoints[z_hop==closest_z,1]
-					y_hop = 10**hopkinsDataPoints[z_hop==closest_z,2]/cosmology.h**3
-					err_hop = [y_hop*(1.0-10**(-hopkinsDataPoints[z_hop==closest_z,3])), y_hop*(10**hopkinsDataPoints[z_hop==closest_z,3] - 1.0)]
-					axarr[i,j].errorbar(x_hop, y_hop, yerr=err_hop, ecolor='k', fmt='none', color='k', capsize=2)
-				axarr[i,j].errorbar([0], [0], yerr=[0], ecolor='k', fmt='none', color='k', capsize=2, label='H07')
+				if includeHopkins:
+					closest_z = unique_z_hop[np.argmin(np.abs(unique_z_hop-redshiftSlices[z_index]))]
+					if np.abs(closest_z - redshiftSlices[z_index]) < 0.1:
+						x_hop = 10**hopkinsDataPoints[z_hop==closest_z,1]
+						y_hop = 10**hopkinsDataPoints[z_hop==closest_z,2]/cosmology.h**3
+						err_hop = [y_hop*(1.0-10**(-hopkinsDataPoints[z_hop==closest_z,3])), y_hop*(10**hopkinsDataPoints[z_hop==closest_z,3] - 1.0)]
+						axarr[i,j].errorbar(x_hop, y_hop, yerr=err_hop, ecolor='k', fmt='none', color='k', capsize=2)
+					axarr[i,j].errorbar([0], [0], yerr=[0], ecolor='k', fmt='none', color='k', capsize=2, label='H07')
 				
 				if (includeUeda) & (redshiftSlices[z_index] <= 5):
 					#plottedUedaLums = np.logspace(8,16,100)
@@ -171,6 +178,11 @@ def plotLuminosityFunctions(lumFuncts, labels=None, colors=None, redshiftSlices=
 					axarr[i,j].fill_between(lum_ueda, numberDensity_ueda[closest_z_ueda_index,:,0]/cosmology.h**3, numberDensity_ueda[closest_z_ueda_index,:,1]/cosmology.h**3, \
 					color='k', alpha=0.7, hatch='/')
 					axarr[i,j].fill_between([], [], [], lw=2, color='k', label='U14', alpha=0.7)
+
+				if includeShen:
+					x_shen = np.logspace(42.5,50)/3.846e33
+					for fit, ls in zip(['A','B'], ['-','--']):
+						axarr[i,j].plot(x_shen, shen2020.dn_dlogL(x_shen, redshiftSlices[z_index], fit)/cosmology.h**3, ls=ls, lw=2, color='k', label='S20'+fit)
 
 				if showCompleteness:
 					closestRedshiftIndex_completeness = np.argmin(np.abs(np.array(redshiftSlices[z_index]) - completenessTable['redshift']))
