@@ -33,7 +33,7 @@ def integrateAccretion(mass, spin, f_Edd, timeStep, includeSpinDependence=False,
 		newSpin = spin
 	return newMass, newSpin, luminosity
 
-def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998, MAD_super=False, MAD_sub=False, maximumMass=None, maxSteps=50):
+def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998, MAD_super=False, MAD_sub=False, maximumMass=None, maxSteps=100, coherent=True, madness=1.0):
 	"""
 	Account for MAD disks and use an integrator to evolve mass and spin.  Not optimized.
 
@@ -52,9 +52,9 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 	#A for loop with Runge-Kutta, surely very slow.  Relaxed some precision requirements.
 	#TODO: parallelize
 	for index in range(len(mass)):
-		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=50, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
+		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=maxSteps, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
 		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0, \
-		mad_superEddington=MAD_super, mad_subEddington=MAD_sub, fEdd_ADAF_threshold=f_EddCrit, maximumMass=maximumMassUsed[index])
+		mad_superEddington=MAD_super, mad_subEddington=MAD_sub, fEdd_ADAF_threshold=f_EddCrit, maximumMass=maximumMassUsed[index], coherent=coherent, madness=madness)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
 		if integrator.currentIndex == maxSteps-1:

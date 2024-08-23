@@ -37,7 +37,7 @@ def calcEddingtonAccretionRate(mass, spin):
 	"""
 
 	efficiency = radiativeEfficiencyThin(spin)
-	return 4 * np.pi * G * mass * m_p / (efficiency * thomsonCrossSection * c) * yr
+	return 4 * np.pi * G * mass * m_p / (efficiency * thomsonCrossSection * c) * yr * (1.0-efficiency)
 
 def calcMaximumMagnetization(spin):
 	"""
@@ -121,12 +121,17 @@ def calcJetPower(mass, spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e
 	else:
 		return 0.0
 
-def calcMassEvolutionRate(mass, spin, eddingtonRatio):
+def calcMassEvolutionRate(mass, spin, eddingtonRatio, coherent=True):
 	"""
 	Definition of the Eddington ratio.
 	"""
 
-	return calcEddingtonAccretionRate(mass, spin) * eddingtonRatio
+	coherentAccretionRate = calcEddingtonAccretionRate(mass, spin) * eddingtonRatio
+	if coherent:
+		return coherentAccretionRate
+	else:
+		incoherentAccretionRate = calcEddingtonAccretionRate(mass, -spin) * eddingtonRatio
+		return (coherentAccretionRate + incoherentAccretionRate) / 2
 
 def calcSpinupNT(spin):
 	"""
@@ -170,12 +175,18 @@ def calcSpinup(spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_
 			s = s * madness + calcSpinupNT(spin) * (1.0-madness)
 		return s
 
-def calcSpinEvolutionRate(mass, spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_superEddington=True, mad_subEddington=True):
+def calcSpinEvolutionRate(mass, spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=3e-2, mad_superEddington=True, mad_subEddington=True, coherent=True):
 	"""
 	Combine equations of Narayan et al. (2022) with new Mdot dependence.
 	"""
 	
-	return calcSpinup(spin, eddingtonRatio, madness=1.0, fEdd_ADAF_threshold=fEdd_ADAF_threshold, mad_superEddington=mad_superEddington, mad_subEddington=mad_subEddington) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) / mass
+	coherentSpinup = calcSpinup(spin, eddingtonRatio, madness=madness, fEdd_ADAF_threshold=fEdd_ADAF_threshold, mad_superEddington=mad_superEddington, mad_subEddington=mad_subEddington) * eddingtonRatio * calcEddingtonAccretionRate(mass, spin) / mass
+	if coherent:
+		return coherentSpinup
+	else:
+		#Assume that spinflips happen all the time, on timescales short compared to the evolutionary timescale.  Careful--there's a sign flip convention required.
+		incoherentSpinup = -calcSpinup(-spin, eddingtonRatio, madness=madness, fEdd_ADAF_threshold=fEdd_ADAF_threshold, mad_superEddington=mad_superEddington, mad_subEddington=mad_subEddington) * eddingtonRatio * calcEddingtonAccretionRate(mass, -spin) / mass
+		return (coherentSpinup + incoherentSpinup)/2
 
 class SpinEvolverRK45(object):
 	"""
@@ -183,7 +194,7 @@ class SpinEvolverRK45(object):
 	"""
 
 	def __init__(self, M0, a0, fEdd0, nsteps=1e6, maximumTime_yr=13.8e9, maximumMass=np.inf, minimumSpin=-0.998, maximumSpin=0.998, allowedFractionalMassError=1e-10, allowedSpinError=1e-10, initialTimeStep_yr=1e6, minimumFractionalTimeResolution=0.001, \
-	madness=1.0, mad_superEddington=True, mad_subEddington=True, fEdd_ADAF_threshold=3e-2, silent=True):
+	madness=1.0, mad_superEddington=True, mad_subEddington=True, fEdd_ADAF_threshold=3e-2, silent=True, coherent=True):
 
 		#Some cleanup
 		M0 = float(M0)
@@ -213,6 +224,7 @@ class SpinEvolverRK45(object):
 		self.mad_superEddington = bool(mad_superEddington)
 		self.mad_subEddington = bool(mad_subEddington)
 		self.fEdd_ADAF_threshold = float(fEdd_ADAF_threshold)
+		self.coherent = bool(coherent)
 
 		#Integration parameters
 		self.timeStep = initialTimeStep_yr  #Will naturally get bigger.
@@ -275,8 +287,8 @@ class SpinEvolverRK45(object):
 				spinPrediction = np.maximum(self.minimumSpin,np.minimum(self.maximumSpin, spinPrediction))
 
 				fEdd = eddingtonRatioFunction(self.time[self.currentIndex] + self.timeStep*self._A[k], massPrediction, spinPrediction)
-				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, fEdd)
-				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd, madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington)
+				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, fEdd, coherent=self.coherent)
+				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, fEdd, madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington, coherent=self.coherent)
 			proposedMass = self.mass[self.currentIndex] + np.sum(self._CH * k_list_mass)
 			truncationError_mass = np.abs(np.sum(self._CT * k_list_mass))
 			if truncationError_mass > 0:
@@ -303,7 +315,10 @@ class SpinEvolverRK45(object):
 		self.time[self.currentIndex+1] = self.time[self.currentIndex] + self.timeStep
 		self.mass[self.currentIndex+1] = proposedMass
 		self.spin[self.currentIndex+1] = proposedSpin
-		self.eddingtonRatio[self.currentIndex+1] = eddingtonRatioFunction(self.time[self.currentIndex+1], self.mass[self.currentIndex+1], self.spin[self.currentIndex])
+		if not self.coherent:
+			#Randomly choose prograde or retrograde for the observed snapshot.
+			self.spin[self.currentIndex+1] *= np.random.choice([-1,1])
+		self.eddingtonRatio[self.currentIndex+1] = eddingtonRatioFunction(self.time[self.currentIndex+1], self.mass[self.currentIndex+1], self.spin[self.currentIndex+1])
 		self.jetPower[self.currentIndex+1] = calcJetPower(self.mass[self.currentIndex+1], self.spin[self.currentIndex+1], self.eddingtonRatio[self.currentIndex+1], madness=self.madness, fEdd_ADAF_threshold=self.fEdd_ADAF_threshold, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington)
 		self.currentIndex += 1
 		if not self.silent:

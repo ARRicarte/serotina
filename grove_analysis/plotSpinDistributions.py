@@ -20,7 +20,7 @@ import warnings
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_range=[0,np.inf], Mstar_range=[0,np.inf], Lbol_range=[0,np.inf], fEdd_range=[0,np.inf], \
-	treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, xaxis=np.linspace(-1,1,1000), normalize=True, compute_kde=True, output=None, bins=np.linspace(-1,1,13)):
+	treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, xaxis=np.linspace(-1,1,1000), normalize=True, compute_kde=True, output=None, bins=np.linspace(-1,1,13), volumeWeight=True):
 	"""
 	Read a grove, then produce a Gaussian KDE function of spins.
 	Weighted by halo number densities.
@@ -62,7 +62,10 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 					warnings.warn(f"{key} was not saved in this file. Skipping this filter.")
 					pass
 			spinValueList[z_index].extend(megaDict['spin_bh'][mask])
-			spinWeightList[z_index].extend(np.full(np.sum(mask), sf.calcHaloNumberDensity(hostHaloMass, treeStartingRedshift)))
+			if volumeWeight:
+				spinWeightList[z_index].extend(np.full(np.sum(mask), sf.calcHaloNumberDensity(hostHaloMass, treeStartingRedshift)))
+			else:
+				spinWeightList[z_index].extend(np.full(np.sum(mask), 1.0))
 			treeIndexList[z_index].extend(megaDict['treeIndex'][mask])
 
 	distributions = []
@@ -171,7 +174,7 @@ def computeSpinDistribution(ensemble, redshifts, Mbh_range=[0,np.inf], Mhalo_ran
 			pickle.dump(D, openFile, protocol=2)
 
 def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None, fig_ax=None, figsize=(5,4), doFormatting=True, fontsize=10,\
-	xlabel=None, ylabel=None, alpha=0.7, xlim=None, ylim=None, show=True, output=None, histogram=False, renormalize=False):
+	xlabel=None, ylabel=None, alpha=0.7, xlim=None, ylim=None, show=True, output=None, histogram=False, renormalize=False, errors=True):
 	"""
 	Starting with the output of computeSpinDistribution(), make a plot.
 	"""
@@ -185,8 +188,9 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 		if renormalize:
 			probabilityDistribution /= np.max(probabilityDistribution[:,1])
 		if histogram:
-			ax.bar(xaxis[:-1], probabilityDistribution[:,2]-probabilityDistribution[:,0], bottom=probabilityDistribution[:,0], align='edge', width=np.diff(xaxis), alpha=alpha, color=color, label=label)
-			ax.step(xaxis[:-1], probabilityDistribution[:,1], lw=2, color=color, where='post')
+			if errors:
+				ax.bar(xaxis[:-1], probabilityDistribution[:,2]-probabilityDistribution[:,0], bottom=probabilityDistribution[:,0], align='edge', width=np.diff(xaxis), alpha=alpha, color=color)
+			ax.stairs(probabilityDistribution[:,1], edges=xaxis, lw=2, color=color, label=label)
 		else:
 			ax.fill_between(xaxis, probabilityDistribution[:,0], probabilityDistribution[:,2], alpha=alpha, color=color, label=label)
 	elif len(probabilityDistribution.shape) == 1:
@@ -214,11 +218,14 @@ def plotSpinDistribution(xaxis, probabilityDistribution, label=None, color=None,
 
 def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=None, listOfColors=None, figsize=(8,4), xaxis=np.linspace(0,1,1000), figshape=None, show=True, output=None, \
 	Mbh_range=[0,np.inf], Mhalo_range=[0,np.inf], Mstar_range=[0,np.inf], Lbol_range=[0,np.inf], fEdd_range=[0,np.inf], treeStartingRedshift=0, transformFunction=None, n_bootstrap=10000, \
-	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="$P/P_\mathrm{max}$", fontsize=11, renormalize=False, compute_kde=True):
+	xlim=None, ylim=None, xlabel=r"$a_\bullet$", ylabel="$P/P_\mathrm{max}$", fontsize=11, renormalize=False, compute_kde=True, fig_axarr=None):
 
-	if figshape is None:
-		figshape = (1, len(listOfRedshifts))
-	fig, axarr = plt.subplots(figshape[0], figshape[1], figsize=figsize)
+	if fig_axarr is None:
+		if figshape is None:
+			figshape = (1, len(listOfRedshifts))
+		fig, axarr = plt.subplots(figshape[0], figshape[1], figsize=figsize)
+	else:
+		fig, axarr = fig_axarr
 	axarr = np.atleast_1d(axarr)
 
 	for e_index in range(len(listOfEnsembles)):
@@ -273,5 +280,7 @@ def plotSpinDistributionGrid(listOfEnsembles, listOfRedshifts=[0], listOfLabels=
 	fig.tight_layout()
 	if output is not None:
 		fig.savefig(output, dpi=400)
+		plt.close(fig)
 	else:
-		fig.show()
+		if fig_axarr is None:
+			fig.show()

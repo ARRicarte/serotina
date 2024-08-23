@@ -85,7 +85,8 @@ class SAM(object):
 		'useColdReservoir': False, 'f_superEdd': 5.0, 'makeEllipticals': False, 'f_EddCrit': 3e-2, \
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
-		'diskAlignmentParameters': [np.inf], 'MAD_sub': False, 'MAD_super': False, 'violentMergers': False, 'alwaysMergeEmpty': True, 'powerLawDecline': None}
+		'diskAlignmentParameters': [np.inf], 'MAD_sub': False, 'MAD_super': False, 'violentMergers': False, 'alwaysMergeEmpty': True, 'powerLawDecline': None, \
+		'coherentAccretion': True, 'spin_seed': 0.0, 'madness': 1.0}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -281,7 +282,7 @@ class SAM(object):
 			self.m_merged = np.concatenate((self.m_merged, np.zeros(n_new)))
 			self.m_burst = np.concatenate((self.m_burst, np.zeros(n_new)))
 			self.m_steady = np.concatenate((self.m_steady, np.zeros(n_new)))
-			self.spin_bh = np.concatenate((self.spin_bh, np.zeros(n_new)))
+			self.spin_bh = np.concatenate((self.spin_bh, np.full(n_new,self.spin_seed)))
 			self.seedType = np.concatenate((self.seedType, np.array(seedTypes)))
 			self.bhToProg = np.concatenate((self.bhToProg, np.array(seededProgenitors)))
 			self.seedTime = np.concatenate((self.seedTime, np.full(n_new,self.uniqueTime[self.step])))
@@ -594,7 +595,7 @@ class SAM(object):
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], growthFromBurst, growthFromSteady = \
 			acc.accretionDualMode(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], f_EddMax, f_EddMin, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub)
+			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub, coherent=self.coherentAccretion, madness=self.madness)
 
 			#Change mode if necessary
 			finishedQuasars = self.m_bh[accretors] >= massLimitsQuasar
@@ -646,7 +647,8 @@ class SAM(object):
 			self.m_bh[accretors], self.spin_bh[accretors], self.L_bol[accretors], self.eddRatio[accretors], self.t_decline[accretors], growthFromBurst, growthFromSteady = \
 			acc.accretionDualModeDecline(self.m_bh[accretors], self.spin_bh[accretors], timeSteps[accreting], times[accreting], self.t_decline[accretors], f_EddMax, 
 			f_EddCrit=self.f_EddCrit, includeSpinDependence=self.spinEvolution, maxBurstMass=massLimitsQuasar, maxSteadyMass=massLimitsSteady, spinMax=self.spinMax, \
-			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub, powerLawDecline=self.powerLawDecline, sigma_steady=sf._sigma_typeI(redshifts[accreting]))
+			fiducialRadiativeEfficiency=self.defaultRadiativeEfficiency, MAD_super=self.MAD_super, MAD_sub=self.MAD_sub, powerLawDecline=self.powerLawDecline, sigma_steady=sf._sigma_typeI(redshifts[accreting]), \
+			coherent=self.coherentAccretion, madness=self.madness)
 
 			#Change mode if necessary.  
 			finishedQuasars = (self.mode[accretors] == 'quasar') & (self.m_bh[accretors] >= massLimitsQuasar)
@@ -660,12 +662,6 @@ class SAM(object):
 			self.m_burst[accretors] += growthFromBurst
 			self.m_steady[accretors] += growthFromSteady
 
-		#Make sure that the non-accretors have 0 Eddington ratio and luminosity
-		'''
-		if np.any(~accreting):
-			self.L_bol[nonAccretors] = 0
-			self.eddRatio[nonAccretors] = 0
-		'''
 		self.lastIntegrationTime[bhs] = times
 
 	def integrateBHs(self, bhs, endTime, integratingMethod):

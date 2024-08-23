@@ -13,7 +13,6 @@ from .. import constants
 import pickle
 import gzip
 import os
-import pdb
 from ..util import folderToMovie
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
 
@@ -29,6 +28,8 @@ class SAM_Analysis(object):
 		with gzip.open(pickledSAMOutput, 'rb') as myfile:
 			data = pickle.load(myfile)
 		self.m_bh = data['m_bh_snap']
+		self.m_burst = data['m_burst_snap']
+		self.m_merged = data['m_merged_snap']
 		self.spin_bh = data['spin_bh_snap']
 		self.eddRatio = data['eddRatio_snap']
 		self.m_halo = data['m_halo_snap']
@@ -49,13 +50,14 @@ class SAM_Analysis(object):
 		exists = np.zeros(len(self.time), dtype=bool)
 		nlev = len(self.time)
 		for level in range(nlev):
-			exists_bh = self.bh_id[level].count(bh_id)
-			if exists_bh == 1:
-				nextIndex = self.bh_id[level].index(bh_id)
+			nonzeroMass = np.array(self.m_bh[level]) != 0
+			match = (np.array(self.bh_id[level]) == bh_id) & nonzeroMass
+			if np.sum(match) == 0:
+				exists[level] = False
+				trace[level] = -1
 			else:
-				nextIndex = -1
-			trace[level] = nextIndex
-			exists[level] = exists_bh
+				exists[level] = True
+				trace[level] = np.where(match)[0][0]
 		return trace, exists
 
 	def plotGrowthTracks(self, showLegend=False, depth=0, alphaBeta=(8.22,4.58)):
@@ -151,13 +153,16 @@ class SAM_Analysis(object):
 			plt.legend(loc=3, frameon=False)
 		plt.show()
 
-	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6), thinRegime=(3e-2,1), ylim1=(1e2,1e10), ylim2=(-1,1), ylim3=(1e-5,10), altLabels=None, xlim=None):
+	def plotGrowthHistory(self, plotTime=False, showLegend=False, figsize=(8,6), thinRegime=(3e-2,1), ylim1=(1e2,1e10), ylim2=(-1,1), ylim3=(1e-5,10), altLabels=None, xlim=None, fig_axarr=None, color=None, formatting=True, incoherent=False):
 
 		"""
 		Plot the evolution of the main progenitor's black hole as a function of redshift.
 		"""
 
-		fig, axarr = plt.subplots(3, 1, figsize=figsize, sharex=True)
+		if fig_axarr is None:
+			fig, axarr = plt.subplots(3, 1, figsize=figsize, sharex=True)
+		else:
+			fig, axarr = fig_axarr
 
 		if plotTime:
 			xaxis = self.time
@@ -173,51 +178,68 @@ class SAM_Analysis(object):
 				xlim = (self.redshift[0], self.redshift[-1])
 
 		#Indices of the main black hole
-		mainBH_indices, mainBH_exists = self.traceBH(self.bh_id[-1][0])
+		desiredBHID = self.bh_id[-1][self.satelliteToCentral[-1].index(-1)]
+		mainBH_indices, mainBH_exists = self.traceBH(desiredBHID)
 
 		#Plot Main Progenitor Mass
 		maxis = np.array([self.m_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
-		axarr[0].semilogy(xaxis[mainBH_exists], maxis[mainBH_exists], linewidth=2, label="Mass", linestyle='-', color='k')
+		if color is None:
+			plotColor = 'k'
+		else:
+			plotColor = color
+		axarr[0].semilogy(xaxis[mainBH_exists], maxis[mainBH_exists], linewidth=2, linestyle='-', color=plotColor)
 		axarr[0].set_ylabel(r'$M_\bullet \ [M_\odot]$', fontsize=12)
 		axarr[0].set_ylim(ylim1)
 		axarr[0].set_xlim(xlim)
 
 		#Plot Main Progenitor Spin
 		aaxis = np.array([self.spin_bh[i][mainBH_indices[i]] for i in range(len(self.time))])
-		axarr[1].plot(xaxis[mainBH_exists], aaxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='r')
+		if color is None:
+			plotColor = 'r'
+		else:
+			plotColor = color
+		if incoherent:
+			axarr[1].plot(xaxis[mainBH_exists], np.abs(aaxis[mainBH_exists]), linewidth=2, linestyle='-', color=plotColor)
+		else:
+			axarr[1].plot(xaxis[mainBH_exists], aaxis[mainBH_exists], linewidth=2, linestyle='-', color=plotColor)
 		axarr[1].set_ylabel(r'$a_\bullet$', fontsize=12)
 		axarr[1].plot(xlim, [0]*2, ls=':', lw=1, zorder=-1, color='k')
 		axarr[1].set_ylim(ylim2)
 
 		#Plot Eddington Ratio
 		faxis = np.array([self.eddRatio[i][mainBH_indices[i]] for i in range(len(self.time))])
-		axarr[2].semilogy(xaxis[mainBH_exists], faxis[mainBH_exists], linewidth=2, label="Spin Parameter", linestyle='-', color='b')
+		if color is None:
+			plotColor = 'b'
+		else:
+			plotColor = color
+		axarr[2].semilogy(xaxis[mainBH_exists], faxis[mainBH_exists], linewidth=2, linestyle='-', color=plotColor)
 		axarr[2].set_ylabel(r'$f_\mathrm{Edd}$', fontsize=12)
 		axarr[2].set_ylim(ylim3)
 		axarr[2].set_xlabel(xlabel, fontsize=12, color='k')
 		axarr[2].fill_between(xlim, [thinRegime[0]]*2, [thinRegime[1]]*2, zorder=-1, alpha=0.3, color='k')
 
 		#This is for plotting the alternate xaxis on top.
-		ax_twin = axarr[0].twiny()
-		ax_twin.set_xlim(axarr[0].get_xlim())
-		if plotTime:
-			if altLabels is None:
-				altLabels = [0,0.5,1,2,4,6,10]
-			t_marked = np.interp(altLabels, np.flipud(self.redshift), np.flipud(self.time))
-			ax_twin.set_xticks(t_marked)
-			ax_twin.set_xticklabels([str(z) for z in altLabels])
-			ax_twin.set_xlabel('z', fontsize=12)
-		else:
-			if altLabels is None:
-				altLabels = [0.1,1,5,13.8]
-			z_marked = np.interp(altLabels, self.time, self.redshift)
-			ax_twin.set_xticks(z_marked)
+		if formatting:
+			ax_twin = axarr[0].twiny()
+			ax_twin.set_xlim(axarr[0].get_xlim())
+			if plotTime:
+				if altLabels is None:
+					altLabels = [0,0.5,1,2,4,6,10]
+				t_marked = np.interp(altLabels, np.flipud(self.redshift), np.flipud(self.time))
+				ax_twin.set_xticks(t_marked)
+				ax_twin.set_xticklabels([str(z) for z in altLabels])
+				ax_twin.set_xlabel('z', fontsize=12)
+			else:
+				if altLabels is None:
+					altLabels = [0.1,1,5,13.8]
+				z_marked = np.interp(altLabels, self.time, self.redshift)
+				ax_twin.set_xticks(z_marked)
 			ax_twin.set_xticklabels([str(t) for t in altLabels])
 			ax_twin.set_xlabel(r'$t_\mathrm{ABB} \ [\mathrm{Gyr}]$', fontsize=12)
 
-		fig.tight_layout()
-		fig.subplots_adjust(hspace=0.1)
-		fig.show()
+			fig.tight_layout()
+			fig.subplots_adjust(hspace=0.1)
+			fig.show()
 
 	def plotEvolution(self, mp4name, colorMode='eddingtonRatio', shapeMode='satellites', plotData=False, alphaBeta=(8.22,4.58), \
 		showBar=True, alphaScatter=0.7, relationLabel='Feedback Limit', framerate=10, xlim=(3,5e2), ylim=(1e2,1e11), textloc=(4.0e0,1e10), \

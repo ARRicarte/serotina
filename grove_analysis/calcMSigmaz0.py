@@ -15,8 +15,8 @@ def sigmaToM(sigmaList, alphaBeta=(8.32,5.35)):
 	return 10**(alphaBeta[0] + alphaBeta[1]*np.log10(sigmaList/200))
 
 def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=True, labels=None, \
-	colors=None, figsize=(6,6), output=None, iso=None, includeSatellites=False, minSigmaFit=200, fitALine=False, xlim=(20,500), ylim=(1e3,1e11), \
-	outFiles=None, figshape=None):
+	colors=None, figsize=(6,6), output=None, iso=None, includeSatellites=False, minSigmaFit=200, fitALine=False, xlim=(20,400), ylim=(1e3,1e11), \
+	outFiles=None, figshape=None, spinCoding=False, arange=(-1,1)):
 
 	n_ensembles = len(ensembles)
 	if figshape is None:
@@ -32,10 +32,11 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 		j = e_index % axarr.shape[1]
 		m_bh = np.array([])
 		sigma = np.array([])
+		if spinCoding:
+			spin = np.array([])
 
 		ensemble_folder = ensembles[e_index]
-		#ensemble_files = [file for file in os.listdir(ensemble_folder) if file[-5:]=='.pklz']
-		ensemble_files = ['m12.00n20.pklz']
+		ensemble_files = [file for file in os.listdir(ensemble_folder) if file[-5:]=='.pklz']
 
 		for file in ensemble_files:
 			with gzip.open(ensemble_folder+'/'+file, 'rb') as myfile:
@@ -50,8 +51,14 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 					sigma = np.concatenate((sigma, sf.v2sigma_SIS(sf.M2v(megaDict['m_halo'][selection], 0))))
 				else:
 					sigma = np.concatenate((sigma, sf.velocityDispersion(megaDict['m_halo'][selection], 0)))
+				if spinCoding:
+					spin = np.concatenate((spin, megaDict['spin_bh'][selection]))
 
-		axarr[i,j].scatter(sigma, m_bh, s=20, alpha=0.7, color=colors[e_index])
+		if spinCoding:
+			spinColors = plt.cm.turbo((spin-arange[0])/(arange[1]-arange[0]))
+			axarr[i,j].scatter(sigma, m_bh, s=20, alpha=0.7, facecolor=spinColors, edgecolor='k')
+		else:
+			axarr[i,j].scatter(sigma, m_bh, s=20, alpha=0.7, color=colors[e_index])
 		if alphaBeta is not None:
 			extremeSigmas = np.array([1,1e10])
 			oplotMasses = [sigmaToM(s, alphaBeta=alphaBeta[e_index]) for s in extremeSigmas]
@@ -64,7 +71,7 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 			data_M = np.array([10**logm[0] for logm in data['logM_BH']])
 			data_sigma_err = np.transpose(np.array([[10**logs[0]*(1.0-10**(-logs[1])),10**logs[0]*(10**logs[1]-1)] for logs in data['logsigma']]))
 			data_M_err = np.transpose(np.array([[10**logm[0]*(1.0-10**(-logm[1])),10**logm[0]*(10**logm[1]-1)] for logm in data['logM_BH']]))
-			axarr[i,j].errorbar(data_sigma, data_M, xerr=data_sigma_err, yerr=data_M_err, fmt='none', ecolor='k', alpha=1.0, zorder=1, label='Saglia+16')
+			axarr[i,j].errorbar(data_sigma, data_M, xerr=data_sigma_err, yerr=data_M_err, fmt='none', ecolor='k', alpha=1.0, zorder=-1, label='Saglia+16')
 
 			if dwarfsToo:
 				with open(currentPath + '../lookup_tables/bh_data/msigma_dwarfs.dat', 'r') as myfile:
@@ -93,8 +100,10 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 		axarr[i,j].set_yscale('log')
 		if i == axarr.shape[0]-1:
 			axarr[i,j].set_xlabel(r'$\sigma \ [\mathrm{km} \, \mathrm{s}^{-1}]$', fontsize=14)
-		if (j == 0) | (axarr.shape[0]==1):
+		if j == 0:
 			axarr[i,j].set_ylabel(r'$M_\bullet \ [M_\odot]$', fontsize=14)
+		else:
+			axarr[i,j].set_yticklabels([])
 		if (i == axarr.shape[0]-1) & (j==axarr.shape[1]-1):
 			axarr[i,j].legend(frameon=False, loc='lower right', fontsize=10)
 
@@ -103,6 +112,12 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 			header = 'sigma [km s^-1], m_bh [M_sun]'
 			with open(outFiles[e_index], 'w') as myfile:
 				np.savetxt(myfile, outarray, header=header, delimiter=',')
+
+	if spinCoding:
+		sm = plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('turbo'), norm=plt.Normalize(vmin=arange[0], vmax=arange[1]))
+		sm._A = []
+		cb = plt.colorbar(sm, ticks=arange)
+		cb.set_label(r'$a_*$', fontsize=12)
 
 	fig.tight_layout()
 	fig.subplots_adjust(wspace=0, hspace=0)

@@ -14,3 +14,5 @@ from .plotSpinDistributions import *
 from .plotJetPowerDistributions import *
 from .plotSpinMassRelation import *
 from .bolometricLuminosityFunctionsShen2020 import *
+from .plotRadioLuminosityFunctions import *
+from .radioLuminosityFunctionsCeraj2018 import *
