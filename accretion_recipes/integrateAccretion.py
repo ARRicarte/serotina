@@ -54,14 +54,14 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 	for index in range(len(mass)):
 		integrator = SpinEvolverRK45(mass[index], spin[index], f_Edd[index], nsteps=maxSteps, maximumTime_yr=timeStep[index]*1e9, minimumSpin=-spinMax, maximumSpin=spinMax, \
 		allowedFractionalMassError=1e-2, allowedSpinError=1e-3, initialTimeStep_yr=timeStep[index]*1e9/10, minimumFractionalTimeResolution=1.0, \
-		mad_superEddington=MAD_super, mad_subEddington=MAD_sub, fEdd_ADAF_threshold=f_EddCrit, maximumMass=maximumMassUsed[index], coherent=coherent, madness=madness)
+		mad_superEddington=MAD_super, mad_subEddington=MAD_sub, mdot_Edd_hot_thin=f_EddCrit, maximumMass=maximumMassUsed[index], coherent=coherent, madness=madness)
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
 		if integrator.currentIndex == maxSteps-1:
 			raise ValueError("RK45 integrator reached maximum step.")
 		newMass[index] = integrator.mass[integrator.currentIndex]
 		newSpin[index] = integrator.spin[integrator.currentIndex]
-		luminosity[index] = f_Edd[index] * calcEddingtonLuminosity(newMass[index])
+		luminosity[index] = integrator.L_bol[index]
 		timeSpent[index] = integrator.time[integrator.currentIndex]/1e9
 
 	return newMass, newSpin, luminosity, timeSpent
