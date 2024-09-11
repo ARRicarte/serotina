@@ -85,7 +85,7 @@ def calcRemnantKick(m1, m2, a1, a2, theta1=None, theta2=None, phi1=None, phi2=No
 	magnitudeForRenormalization = np.array([np.sqrt(np.dot(Delta_vector[:,i],Delta_vector[:,i])) for i in range(Delta_vector.shape[1])])
 	Delta_hat = Delta_vector / magnitudeForRenormalization
 	cosine_Theta_Delta = Delta_hat[0,:]	#Choosing the infall direction to be the x-direction, this is the result of a projection
-	v_par = K*eta**2/(1+q) * (a2_perp - q*a1_perp) * cosine_Theta_Delta
+	v_par = K*eta**2/(1+q) * (a2_perp - q*a1_perp) * cosine_Theta_Delta  #Their equation continues with a "KS", but this constant had not yet been fitted.
 
 	#Put everything together.
 	kick_vector = np.vstack([v_m + v_perp*np.cos(xi), v_perp*np.sin(xi), v_par])

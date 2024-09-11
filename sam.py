@@ -86,7 +86,7 @@ class SAM(object):
 		'minimumSeedingRedshift': 15, 'maximumSeedingRedshift': 20, 'useMetalConstraints': False, 'supernovaBarrier': False, 'blackHoleMergerProbability': 1.0, \
 		'steady': None, 'isothermalSigma': False, 'defaultRadiativeEfficiency': 0.1, 'Q_dcbh': 3.0, 'nscMassThreshold': 1e8, 'mergerMode': 'flatProbability', \
 		'diskAlignmentParameters': [np.inf], 'MAD_sub': False, 'MAD_super': False, 'violentMergers': False, 'alwaysMergeEmpty': True, 'powerLawDecline': None, \
-		'coherentAccretion': True, 'spin_seed': 0.0, 'madness': 1.0}
+		'coherentAccretion': True, 'spin_seed': 0.0, 'madness': 1.0, 'violentMassRatio': 0.05}
 
 		#For each parameter, set it to the dictionary value.
 		for parameterKey in parameterDefaults.keys():
@@ -334,25 +334,28 @@ class SAM(object):
 				phi2 = 2*np.pi*np.random.random(npts)
 
 		initialSpins = np.abs(self.spin_bh[primaries])
-		massRatio = self.m_bh[secondaries]/self.m_bh[primaries]
+
+		#Compute mass, spin, and recoil based on GR fits.
+		mass_gr, spin_gr, kick_gr = bhb.calcRemnantProperties(self.m_bh[primaries], self.m_bh[secondaries], np.abs(self.spin_bh[primaries]), np.abs(self.spin_bh[secondaries]), \
+		theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
 		if self.spinEvolution:
 			#Mass-weighted spin projected onto the binary axis, most easily accessed by GW detectors.
 			chi_eff = (self.m_bh[primaries] * np.abs(self.spin_bh[primaries]) * np.cos(theta1) + self.m_bh[secondaries] * np.abs(self.spin_bh[secondaries]) * np.cos(theta2)) / (self.m_bh[primaries] + self.m_bh[secondaries])
 
 			#Note that only positive spins go into this formula.
 			initiallyRetrograde = self.spin_bh[primaries] < 0
-			self.spin_bh[primaries] = bhb.calcRemnantSpin(self.m_bh[primaries], self.m_bh[secondaries], \
-			np.abs(self.spin_bh[primaries]), np.abs(self.spin_bh[secondaries]), \
-			theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2, spinMax=self.spinMax)
+			self.spin_bh[primaries] = spin_gr
 		else:
 			chi_eff = np.zeros(npts, dtype=float)
 		
 		#Save to a list of all merger events.
+		massRatio = self.m_bh[secondaries]/self.m_bh[primaries]
 		self.bh_mergers = np.vstack((self.bh_mergers, np.array([self.m_bh[primaries], massRatio, cosmology_functions.t2z(times), self.spin_bh[primaries], chi_eff, initialSpins]).transpose()))
 
 		#Simply adding the two masses together.
-		self.m_bh[primaries] += self.m_bh[secondaries]
-		self.m_merged[primaries] += self.m_bh[secondaries]
+		#Account for radiated mass loss.  Usually a few percent, but might as well.
+		self.m_merged[primaries] += mass_gr-self.m_bh[primaries]
+		self.m_bh[primaries] = mass_gr
 		self.seedType[primaries] = 'Merged'
 		self.bhToProg[primaries] = progenitors
 
@@ -363,17 +366,20 @@ class SAM(object):
 
 			if self.violentMergers:
 				#If the merger was retrograde, assume that the new gas reservoir is also retrograde.
-				flippers = (np.abs(theta1) > np.pi/2) & (massRatio >= 0.05)
+				flippers = (np.abs(theta1) > np.pi/2) & (massRatio >= self.violentMassRatio)
 				if np.any(flippers):
 					self.spin_bh[primaries] = (-1)**(int(flippers)) * self.spin_bh[primaries]
 
 		#Now let's see if the kick is large enough to cause it to leave the halo.
 		if self.mergerKicks:
-			mergerKicks = bhb.calcRemnantKick(self.m_bh[primaries], self.m_bh[secondaries], self.spin_bh[primaries], self.spin_bh[secondaries], theta1=theta1, theta2=theta2, phi1=phi1, phi2=phi2)
-			
+			#In reality, one may want to do an orbital integration.  This is definitely an area for improvement.  Here, there's only one local speed, and that's sigma.  Maybe just get rid of anything with v>sigma.
+			kicked = kick_gr > self.sigma[self.progToNode[self.bhToProg[primaries]]]
+
+			'''
 			#Compare kick velocity to Choksi formula
 			#Note:  Using the escape velocity here is pretty unfair.  In reality, it depends on baryonic distribution, dark matter profile, etc., all of which are time and orbit dependent.
-			kicked = (mergerKicks > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], cosmology_functions.t2z(times)))
+			kicked = (kick_gr > sf.calcRecoilEscapeVelocity_permanent(self.m_halo[self.progToNode[progenitors]], cosmology_functions.t2z(times)))
+			'''
 			#Set to wandering, halt accretion.
 			if np.any(kicked):
 				self.createWanderers(primaries[kicked], progenitors[kicked])
