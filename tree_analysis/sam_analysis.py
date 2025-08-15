@@ -7,7 +7,6 @@ Analyzes SAM output
 import matplotlib.pyplot as plt
 import numpy as np
 from ..helpers import sam_functions as sf
-from scipy.integrate import simps
 from scipy.interpolate import interp1d
 from .. import constants
 import pickle
@@ -213,7 +212,7 @@ class SAM_Analysis(object):
 		else:
 			plotColor = color
 		axarr[2].semilogy(xaxis[mainBH_exists], faxis[mainBH_exists], linewidth=2, linestyle='-', color=plotColor)
-		axarr[2].set_ylabel(r'$f_\mathrm{Edd}$', fontsize=12)
+		axarr[2].set_ylabel(r'$\dot{m}$', fontsize=12)
 		axarr[2].set_ylim(ylim3)
 		axarr[2].set_xlabel(xlabel, fontsize=12, color='k')
 		axarr[2].fill_between(xlim, [thinRegime[0]]*2, [thinRegime[1]]*2, zorder=-1, alpha=0.3, color='k')
@@ -235,7 +234,6 @@ class SAM_Analysis(object):
 				z_marked = np.interp(altLabels, self.time, self.redshift)
 				ax_twin.set_xticks(z_marked)
 			ax_twin.set_xticklabels([str(t) for t in altLabels])
-			ax_twin.set_xlabel(r'$t_\mathrm{ABB} \ [\mathrm{Gyr}]$', fontsize=12)
 
 			fig.tight_layout()
 			fig.subplots_adjust(hspace=0.1)

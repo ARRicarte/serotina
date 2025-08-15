@@ -19,7 +19,7 @@ from ..helpers.calcLimitingLuminosities import *
 from ..helpers import z6_lf
 from ..cosmology import cosmology_functions as cf
 from ..helpers import absorptionFractions as af
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from . import bolometricLuminosityFunctionsShen2020 as shen2020
 import matplotlib.patches as patches
 currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
@@ -250,8 +250,8 @@ def _computeExpectedNumbers(xaxis, yaxis_range):
 	else:
 		yaxis_mean = np.mean(yaxis_range, axis=0)
 		yaxis_error = 0.5 * np.squeeze(np.diff(yaxis_range, axis=0))
-		expectedNumber = simps(yaxis_mean, x=xaxis)
-		propagatedError = np.sqrt(simps(yaxis_error**2, x=xaxis))
+		expectedNumber = simpson(yaxis_mean, x=xaxis)
+		propagatedError = np.sqrt(simpson(yaxis_error**2, x=xaxis))
 		return expectedNumber, propagatedError
 
 def plotLynxDetections(lumFuncts, labels=None, colors=None, redshiftSlices=[0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], figsize=(8,8), \

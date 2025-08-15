@@ -113,14 +113,17 @@ def calcMSigmaz0(ensembles, alphaBeta=[(8.32,5.35)], plotData=True, dwarfsToo=Tr
 			with open(outFiles[e_index], 'w') as myfile:
 				np.savetxt(myfile, outarray, header=header, delimiter=',')
 
+	fig.tight_layout()
+	fig.subplots_adjust(wspace=0, hspace=0, right=0.88)
+
 	if spinCoding:
 		sm = plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('turbo'), norm=plt.Normalize(vmin=arange[0], vmax=arange[1]))
 		sm._A = []
-		cb = plt.colorbar(sm, ticks=arange)
+		box = axarr[-1,-1].get_position()
+		cbax = fig.add_axes([0.9, box.y0, 0.02, box.height])
+		cb = fig.colorbar(sm, orientation='vertical', cax=cbax, ticks=[-1,0,1])
 		cb.set_label(r'$a_*$', fontsize=12)
 
-	fig.tight_layout()
-	fig.subplots_adjust(wspace=0, hspace=0)
 	for i in range(axarr.shape[0]):
 		for j in range(axarr.shape[1]):
 			if (j > 0) & (axarr.shape[0] > 1):

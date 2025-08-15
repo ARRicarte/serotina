@@ -33,11 +33,11 @@ def integrateAccretion(mass, spin, f_Edd, timeStep, includeSpinDependence=False,
 		newSpin = spin
 	return newMass, newSpin, luminosity
 
-def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=False, f_EddCrit=3e-2, spinMax=0.998, MAD_super=False, MAD_sub=False, maximumMass=None, maxSteps=100, coherent=True, madness=1.0):
+def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, f_EddCrit=3e-2, spinMax=0.998, MAD_super=False, MAD_sub=False, maximumMass=None, maxSteps=100, coherent=True, madness=1.0, includeHotTransition=False):
 	"""
 	Account for MAD disks and use an integrator to evolve mass and spin.  Not optimized.
 
-	includeHotTransition not currently used.
+	TODO: get rid of includeHotTransition, which does nothing.
 	"""
 
 	newMass = np.zeros_like(mass)
@@ -58,10 +58,11 @@ def integrateAccretion_MAD(mass, spin, f_Edd, timeStep, includeHotTransition=Fal
 		constantEddingtonRatioFunction = lambda t, m, a: f_Edd[index]
 		integrator.integrateAll(constantEddingtonRatioFunction)
 		if integrator.currentIndex == maxSteps-1:
+			print(mass[index], spin[index], f_Edd[index], timeStep[index])
 			raise ValueError("RK45 integrator reached maximum step.")
 		newMass[index] = integrator.mass[integrator.currentIndex]
 		newSpin[index] = integrator.spin[integrator.currentIndex]
-		luminosity[index] = integrator.L_bol[index]
+		luminosity[index] = integrator.L_bol[integrator.currentIndex]
 		timeSpent[index] = integrator.time[integrator.currentIndex]/1e9
 
 	return newMass, newSpin, luminosity, timeSpent

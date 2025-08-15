@@ -156,7 +156,7 @@ def calcJetPower(mass, spin, mdot_Edd, madness=1.0, mdot_Edd_hot_thin=3e-2, mad_
 	else:
 		return 0.0
 
-def calcMassEvolutionRate(mass, spin, mdot_Edd, coherent=True, mdot_Edd_hot_thin=3e-2):
+def calcMassEvolutionRate(mass, spin, mdot_Edd, coherent=True, mdot_Edd_hot_thin=3e-2, mad_superEddington=True, mad_subEddington=True, madness=1.0):
 	"""
 	Definition of mdot_Edd.  Don't forget that f_Edd != mdot_Edd != r_Edd
 	"""
@@ -166,14 +166,20 @@ def calcMassEvolutionRate(mass, spin, mdot_Edd, coherent=True, mdot_Edd_hot_thin
 	#Compute losses due to radiation and jets.  Note that this can be negative, correctly causing mass loss.
 	epsilon = radiativeEfficiency(spin, mdot_Edd, mdot_Edd_hot_thin=mdot_Edd_hot_thin)
 	r_Edd = mdot_Edd * radiativeEfficiencyThin(spin) / 0.1
-	eta = etaEM(spin, r_Edd, mdot_Edd_hot_thin=mdot_Edd_hot_thin)
+	if (mad_superEddington & (mdot_Edd > mdot_Edd_hot_thin)) | (mad_subEddington & (mdot_Edd <= mdot_Edd_hot_thin)):
+		eta = calcJetPower(mass, spin, mdot_Edd, madness=madness, mdot_Edd_hot_thin=mdot_Edd_hot_thin, mad_superEddington=mad_superEddington, mad_subEddington=mad_subEddington) / (massInflowRate * c**2 * solarMass / yr)
+	else:
+		eta = 0
 	lossFactor = (1.0 - epsilon - eta)
 
 	if not coherent:
 		#Compute the same for the flipped orientation, average.
 		epsilon_flip = radiativeEfficiency(-spin, mdot_Edd, mdot_Edd_hot_thin=mdot_Edd_hot_thin)
 		r_Edd_flip = mdot_Edd * radiativeEfficiencyThin(-spin) / 0.1
-		eta_flip = etaEM(-spin, r_Edd_flip, mdot_Edd_hot_thin=mdot_Edd_hot_thin)
+		if (mad_superEddington & (mdot_Edd > mdot_Edd_hot_thin)) | (mad_subEddington & (mdot_Edd <= mdot_Edd_hot_thin)):
+			eta_flip = calcJetPower(mass, -spin, mdot_Edd, madness=madness, mdot_Edd_hot_thin=mdot_Edd_hot_thin, mad_superEddington=mad_superEddington, mad_subEddington=mad_subEddington) / (massInflowRate * c**2 * solarMass / yr)
+		else:
+			eta_flip = 0
 		lossFactor += (1.0 - epsilon_flip - eta_flip)
 		lossFactor /= 2
 	return massInflowRate * lossFactor
@@ -211,16 +217,20 @@ def calcSpinup(spin, mdot_Edd, madness=1.0, mdot_Edd_hot_thin=3e-2, mad_superEdd
 
 	if mad_subEddington & (mdot_Edd < mdot_Edd_hot_thin):
 		#You're a MAD ADAF
-		return calcSpinupMAD(spin) * madness + calcSpinupNT(spin) * (1.0-madness)
+		s = calcSpinupMAD(spin) * madness + calcSpinupNT(spin) * (1.0-madness)
 	else:
-		#Start with hydrodynamic spinup.
-		s = sHD(spin, r_Edd)
-		if mad_superEddington & (spin != 0):
+		if mad_superEddington & (mdot_Edd >= mdot_Edd_hot_thin):
+			#Start with hydrodynamic spinup.
+			s = sHD(spin, r_Edd)
+
 			#Then, add electromagnetic spinup.
-			s += -etaEM(spin, r_Edd, mdot_Edd_hot_thin=mdot_Edd_hot_thin) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
-		if madness < 1.0:
-			s = s * madness + calcSpinupNT(spin) * (1.0-madness)
-		return s
+			if spin != 0:
+				s += -etaEM(spin, r_Edd, mdot_Edd_hot_thin=mdot_Edd_hot_thin) * (1.0 / k_ratio(spin) / Omega_H(spin) - 2.0*spin) * np.sign(spin)
+			if madness < 1.0:
+				s = s * madness + calcSpinupNT(spin) * (1.0-madness)
+		else:
+			s = calcSpinupNT(spin)
+	return s
 
 def calcSpinEvolutionRate(mass, spin, mdot_Edd, madness=1.0, mdot_Edd_hot_thin=3e-2, mad_superEddington=True, mad_subEddington=True, coherent=True):
 	"""
@@ -339,7 +349,7 @@ class SpinEvolverRK45(object):
 
 				#Note that we are assuming that eddingtonRatioFunction is in terms of mass, assuming a fiducial radiative efficiency of 10%.
 				mdot_Edd = eddingtonRatioFunction(self.time[self.currentIndex] + self.timeStep*self._A[k], massPrediction, spinPrediction)
-				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, mdot_Edd, coherent=self.coherent, mdot_Edd_hot_thin=self.mdot_Edd_hot_thin)
+				k_list_mass[k] = self.timeStep * calcMassEvolutionRate(massPrediction, spinPrediction, mdot_Edd, coherent=self.coherent, mdot_Edd_hot_thin=self.mdot_Edd_hot_thin, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington, madness=self.madness)
 				k_list_spin[k] = self.timeStep * calcSpinEvolutionRate(massPrediction, spinPrediction, mdot_Edd, madness=self.madness, mdot_Edd_hot_thin=self.mdot_Edd_hot_thin, mad_superEddington=self.mad_superEddington, mad_subEddington=self.mad_subEddington, coherent=self.coherent)
 			proposedMass = self.mass[self.currentIndex] + np.sum(self._CH * k_list_mass)
 			truncationError_mass = np.abs(np.sum(self._CT * k_list_mass))
