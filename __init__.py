@@ -1,6 +1,7 @@
 from .cosmology import *
 from .cosmology.cosmology import set_cosmology
 from .constants import *
+from .run_config import run_from_config
 from .sam import *
 from .helpers import *
 from .tree_analysis import *
