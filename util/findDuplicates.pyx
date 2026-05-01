@@ -9,14 +9,14 @@ cimport numpy as cnp
 
 def findDuplicates(array):
 
-	cdef cnp.int_t[:] arr_view = np.ascontiguousarray(array)
+	cdef cnp.int64_t[:] arr_view = np.ascontiguousarray(array, dtype=np.int64)
 	cdef int npts = len(arr_view)
 	cdef int i
 	cdef int j
-	cdef cnp.int_t[:,:] pairs = np.zeros((npts,2), dtype=int)
+	cdef cnp.int64_t[:,:] pairs = np.zeros((npts,2), dtype=np.int64)
 	cdef int n_pairs = 0
-	cdef cnp.int_t[:] seenBefore = np.zeros(npts, dtype=int)
-	cdef cnp.int_t[:] inAPair = np.zeros(npts, dtype=int)
+	cdef cnp.int64_t[:] seenBefore = np.zeros(npts, dtype=np.int64)
+	cdef cnp.int64_t[:] inAPair = np.zeros(npts, dtype=np.int64)
 
 	for i in range(npts):
 		for j in range(i):

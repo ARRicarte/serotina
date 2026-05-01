@@ -46,7 +46,7 @@ def accretionDualModeDecline(mass, spin, timeStep, time, t_decline, f_EddBurst, 
 		#Infer time from the mass limit.  Note that this approximates that the radiative efficiency stays the same, which may not end up being the case when integrated self-consistently below.
 		timeAsQuasar[hasQuasarTime] = np.minimum(np.log(maxBurstMass[hasQuasarTime]/mass[hasQuasarTime]) / f_EddBurst[hasQuasarTime] * t_Edd / (1.0-quasarRadiativeEfficiencies) * quasarRadiativeEfficiencies, timeStep[hasQuasarTime])
 
-		if (MAD_super | MAD_sub | ~coherent):
+		if (MAD_super or MAD_sub or not coherent):
 			#Trick: integrator terminates at maximum mass, so the time as quasar may not be the same.  Given timestep instead of timeAsQuasar.
 			newMass[hasQuasarTime], newSpin[hasQuasarTime], finalLuminosity[hasQuasarTime], madTimeUsed = integrateAccretion_MAD(mass[hasQuasarTime], spin[hasQuasarTime], f_EddBurst[hasQuasarTime], timeStep[hasQuasarTime], \
 			includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax, MAD_super=MAD_super, MAD_sub=MAD_sub, maximumMass=maxBurstMass[hasQuasarTime], coherent=coherent, madness=madness)
@@ -87,7 +87,7 @@ def accretionDualModeDecline(mass, spin, timeStep, time, t_decline, f_EddBurst, 
 		#Infer time from the mass limit.  Note that this approximates that the radiative efficiency stays the same, which may not end up being the case when integrated self-consistently below.
 		timeAsSteady[hasSteadyTime] = np.minimum(np.log(maxSteadyMass[hasSteadyTime]/mass[hasSteadyTime]) / f_EddSteady[hasSteadyTime] * t_Edd / (1.0-steadyRadiativeEfficiencies) * steadyRadiativeEfficiencies, timeStep[hasSteadyTime]-timeAsQuasar[hasSteadyTime])
 
-		if (MAD_super | MAD_sub | ~coherent):
+		if (MAD_super or MAD_sub or not coherent):
 			newMass[hasSteadyTime], newSpin[hasSteadyTime], finalLuminosity[hasSteadyTime], madTimeUsed = integrateAccretion_MAD(newMass[hasSteadyTime], newSpin[hasSteadyTime], f_EddSteady[hasSteadyTime], timeStep[hasSteadyTime]-timeAsQuasar[hasSteadyTime], \
 			includeHotTransition=includeHotTransition, f_EddCrit=f_EddCrit, spinMax=spinMax, MAD_super=MAD_super, MAD_sub=MAD_sub, coherent=coherent, madness=madness)
 

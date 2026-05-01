@@ -6,13 +6,11 @@ def findFirstDuplicate2_2d(arr1, arr2):
 	Find the first index of the arrays that has a value repeated so far in either array.
 	"""
 
-	cdef cnp.int_t[:,:] arr1_view = np.ascontiguousarray(arr1)
-	cdef cnp.int_t[:,:] arr2_view = np.ascontiguousarray(arr2)
+	cdef cnp.int64_t[:,:] arr1_view = np.ascontiguousarray(arr1, dtype=np.int64)
+	cdef cnp.int64_t[:,:] arr2_view = np.ascontiguousarray(arr2, dtype=np.int64)
 
-	try:
-		assert (len(arr1[:,0]) == len(arr2[:,1])) & (len(arr1[0,:])==2) & (len(arr2[0,:])==2)
-	except:
-		raise ValueError, "Two arrays must be n by 2."
+	if not ((arr1.shape[0] == arr2.shape[0]) and (arr1.shape[1] == 2) and (arr2.shape[1] == 2)):
+		raise ValueError("Two arrays must be n by 2.")
 
 	cdef int i
 	cdef int j

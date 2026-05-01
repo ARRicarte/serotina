@@ -6,11 +6,11 @@ def primariesAndSecondaries(ids, masses):
 	Sort an n by 2 array of ids by the masses of each pair.
 	"""
 
-	cdef cnp.int_t[:,:] id_view = np.ascontiguousarray(ids)
-	cdef cnp.float64_t[:,:] m_view = np.ascontiguousarray(masses)
+	cdef cnp.int64_t[:,:] id_view = np.ascontiguousarray(ids, dtype=np.int64)
+	cdef cnp.float64_t[:,:] m_view = np.ascontiguousarray(masses, dtype=np.float64)
 	cdef int npts = len(id_view)
-	cdef cnp.int_t[:] primaries = np.zeros(npts, dtype=int)
-	cdef cnp.int_t[:] secondaries = np.zeros(npts, dtype=int)
+	cdef cnp.int64_t[:] primaries = np.zeros(npts, dtype=np.int64)
+	cdef cnp.int64_t[:] secondaries = np.zeros(npts, dtype=np.int64)
 	cdef int i
 
 	for i in range(npts):

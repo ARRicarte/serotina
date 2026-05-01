@@ -6,16 +6,14 @@ def findFirstDuplicate2(arr1, arr2):
 	Find the first index of the arrays that has a value repeated so far in either array.
 	"""
 
-	cdef cnp.int_t[:] arr1_view = np.ascontiguousarray(arr1)
-	cdef cnp.int_t[:] arr2_view = np.ascontiguousarray(arr2)
-	try:
-		assert len(arr1_view) == len(arr2_view)
-	except:
-		raise ValueError, "Two arrays must have the same lengths."
+	cdef cnp.int64_t[:] arr1_view = np.ascontiguousarray(arr1, dtype=np.int64)
+	cdef cnp.int64_t[:] arr2_view = np.ascontiguousarray(arr2, dtype=np.int64)
+	if len(arr1_view) != len(arr2_view):
+		raise ValueError("Two arrays must have the same lengths.")
 
 	cdef int i
 	cdef int j
-	cdef int npts = len(arr1_view)	
+	cdef int npts = len(arr1_view)
 
 	for i in range(npts):
 		if arr1_view[i] == arr2_view[i]:
