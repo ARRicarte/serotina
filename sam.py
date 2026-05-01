@@ -994,11 +994,14 @@ class SAM(object):
 			matchedProgenitor, feedingHole = self.findMatchingBlackHolesToProgenitor(relevantHaloOrBlackHole[:,0])
 
 			#Check the criterion that quasar targets are below the maximum mass.  Otherwise, don't trigger.
+			#NOTE: immediateDeclineHole was a test.  These runs were nuts.
+
+			#immediateDeclineHole = np.array([]) #Default to possibly be overwritten
 			if len(feedingHole) > 0:
 				massLimitsQuasar = self.M_bhSigma(self.bhToProg[feedingHole])
 				toQuasar = self.m_bh[feedingHole] < massLimitsQuasar
+				#feedingHole, immediateDeclineHole = feedingHole[toQuasar], feedingHole[~toQuasar]
 				feedingHole = feedingHole[toQuasar]
-				immediateDeclineHole = feedingHole[~toQuasar]
 
 			if len(feedingHole) > 0:
 				self.integrateBHs(feedingHole, time, integrateAll)
@@ -1017,10 +1020,12 @@ class SAM(object):
 					self.mode[feedingHole[notQuasars]] = 'quasar'
 					self.t_decline[feedingHole[notQuasars]] = np.inf
 
+			'''
 			if len(immediateDeclineHole) > 0:
 				#These were already overmassive. Put into decline immediately.
 				self.integrateBHs(immediateDeclineHole, time, integrateAll)
 				self.t_decline[immediateDeclineHole] = time
+			'''
 
 			self.feedTime[relevantHaloOrBlackHole[:,0]] = np.inf
 
