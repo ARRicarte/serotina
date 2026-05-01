@@ -1,95 +1,74 @@
+"""
+Cosmological distance and time functions backed by the active astropy cosmology.
+
+All functions use the cosmology object from cosmology.py.  To switch cosmologies
+call serotina.set_cosmology() which will also rebuild the z<->t lookup tables.
+"""
+
 import numpy as np
-from ..cosmology import cosmology
-import pickle
 from scipy.interpolate import interp1d
-from scipy.integrate import quad
-from ..constants import constants
-import os
-currentPath = os.path.abspath(os.path.dirname(__file__)) + '/'
+from . import cosmology as cosm
+import astropy.units as u
 
-"""
-Time and redshift conversions.
-"""
 
-with open(currentPath + "../lookup_tables/tofz.pkl", 'rb') as myfile:
-	data = pickle.load(myfile, encoding='latin1')
-tarray = data['tarray']
-zarray = data['zarray']
+def _rebuild_tables():
+    """Build z<->t interpolation tables from the current cosmology.
 
-z2t_interp = interp1d(zarray, tarray)
-t2z_interp = interp1d(tarray/1e9, zarray)
+    Called automatically on import and whenever set_cosmology() is called.
+    Uses a table rather than calling astropy directly because z2t/t2z are
+    invoked inside the SAM's inner evolution loop with arrays.
+    """
+    global z2t_interp, t2z_interp
+    z_arr = np.linspace(0, 20, 10000)
+    t_arr = cosm.cosmo.age(z_arr).to('Gyr').value   # monotonically decreasing
+    z2t_interp = interp1d(z_arr, t_arr, bounds_error=False, fill_value='extrapolate')
+    # For t2z we need t as the x-axis (must be increasing), so reverse both arrays.
+    t2z_interp = interp1d(t_arr[::-1], z_arr[::-1], bounds_error=False, fill_value='extrapolate')
 
-"""
-Tabulated luminosity distances
-"""
 
-with open(currentPath + "../lookup_tables/luminosityDistances.pkl", 'rb') as myfile:
-	data = pickle.load(myfile, encoding='latin1')
-z_ld = data['redshifts']
-ld = data['luminosityDistances']
+_rebuild_tables()
 
-#Output in Mpc
-computeLuminosityDistance = interp1d(z_ld, ld)
-
-def computeComovingDistance(z):
-	return computeLuminosityDistance(z) / (1.0 + z)
-
-def computeAngularDistance(z):
-	return computeLuminosityDistance(z) / (1.0 + z)**2
-
-def E(z):
-	"""
-	A common function is cosmology.
-
-	H(z) = H_0 * E(z)
-	"""
-	return np.sqrt(cosmology.Omega_m * (1.0+z)**3 + cosmology.Omega_l)
 
 def z2t(z):
-	"""
-	Compute time as a function of redshift.  Results have been tabulated for the Planck2015 cosmology.
+    """Redshift -> age of universe in Gyr."""
+    return z2t_interp(z)
 
-	Returns time in Gyr.
-	"""
-	return z2t_interp(z)/1e9
 
 def t2z(t):
-	"""
-	Compute redshift as a function of time.
-	"""
-	return t2z_interp(t)
+    """Age of universe in Gyr -> redshift."""
+    return t2z_interp(t)
+
+
+def computeLuminosityDistance(z):
+    """Luminosity distance in Mpc."""
+    return cosm.cosmo.luminosity_distance(z).to('Mpc').value
+
+
+def computeComovingDistance(z):
+    """Comoving distance in Mpc."""
+    return cosm.cosmo.comoving_distance(z).to('Mpc').value
+
+
+def computeAngularDistance(z):
+    """Angular diameter distance in Mpc."""
+    return cosm.cosmo.angular_diameter_distance(z).to('Mpc').value
+
+
+def E(z):
+    """Dimensionless Hubble parameter E(z) = H(z) / H0."""
+    return cosm.cosmo.efunc(z)
+
 
 def computeH(z):
-	"""
-	Same traditional units as H_0:  km/s/Mpc.
+    """Hubble parameter H(z) in km/s/Mpc."""
+    return cosm.cosmo.H(z).value
 
-	Assumes Omega_m + Omega_l = 1 to save time.
-	"""
-
-	return cosmology.H_0 * (cosmology.Omega_m * (1.0 + z)**3 + cosmology.Omega_l)**0.5
-
-def computeLuminosityDistance_slow(z):
-	"""
-	Compute the luminosity distance to some redshift by numerically evaluating the integral.   You probably don't want this.
-
-	So as not to waste time, this only works for flat universes.
-
-	Output in Mpc.
-	"""
-	d_H = constants.c * cosmology.t_H * constants.yr
-	d_c = d_H * quad(lambda zprime: (cosmology.Omega_m*(1+zprime)**3 + cosmology.Omega_l)**-0.5, 0, z)[0]
-	return d_c * (1 + z) / (1e6 * constants.pc)
 
 def computedVdz(z):
-	"""
-	The amount of observable volume in a given redshift bin in cubic Mpc
-	"""
-	H_inverseSeconds = computeH(z) * 1e3 / (1e6 * constants.pc)
-	return 4 * np.pi * (constants.c / (1e6 * constants.pc)) * computeLuminosityDistance(z)**2 / H_inverseSeconds / (1.0 + z)**2	
+    """Comoving volume element dV/dz over the full sky in Mpc³."""
+    return cosm.cosmo.differential_comoving_volume(z).to('Mpc3 / sr').value * 4 * np.pi
+
 
 def computedzdt(z):
-	"""
-	Returned in inverse yr
-	"""
-	H_inverseYears = computeH(z) * 1e3 / (1e6 * constants.pc) * constants.yr
-	return H_inverseYears * (1.0 + z)
+    """dz/dt in yr⁻¹ (positive convention used for rate calculations)."""
+    return cosm.cosmo.H(z).to(1 / u.yr).value * (1.0 + z)
